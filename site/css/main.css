@@ -1,0 +1,176 @@
+/* ============================================================
+   main.css — reset, variáveis globais, tipografia e grid raiz
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap');
+
+/* ---- Variáveis de design ---- */
+:root {
+  --color-primary:       #1A3A5C;
+  --color-primary-hover: #234d7a;
+  --color-danger:        #C53030;
+  --color-danger-hover:  #a02020;
+  --color-danger-bg:     #FCE8E8;
+  --color-success:       #2E7D32;
+  --color-success-bg:    #E6F4EA;
+  --color-warning-bg:    #FFF8E1;
+  --color-warning:       #B78103;
+
+  --color-text:          #1A1A1A;
+  --color-text-muted:    #555555;
+  --color-border:        #D0D0D0;
+  --color-border-strong: #333333;
+  --color-surface:       #F5F6F8;
+  --color-surface-alt:   #EAECEF;
+  --color-bg:            #FFFFFF;
+
+  --color-ref:           #1A3A5C;
+  --color-measure:       #2E7D32;
+  --color-control:       #E65100;
+
+  --font-body:  'Roboto', Arial, Helvetica, sans-serif;
+  --font-mono:  'Roboto Mono', 'Courier New', Courier, monospace;
+
+  --header-height:  54px;
+  --panel-padding:  20px;
+  --radius:         4px;
+  --radius-sm:      2px;
+
+  --transition: 150ms ease;
+}
+
+/* ---- Reset ---- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  line-height: 1.4;
+}
+
+/* ---- Grade raiz: header + conteúdo ---- */
+#app-content {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  height: calc(100vh - var(--header-height));
+  overflow: hidden;
+}
+
+/* ---- Utilitários comuns ---- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- Botões base ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition), opacity var(--transition), border-color var(--transition);
+  line-height: 1;
+}
+
+.btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: #FFFFFF;
+  border-color: var(--color-primary);
+}
+.btn--primary:hover:not(:disabled) { background: var(--color-primary-hover); }
+
+.btn--danger {
+  background: var(--color-danger);
+  color: #FFFFFF;
+  border-color: var(--color-danger);
+}
+.btn--danger:hover:not(:disabled) { background: var(--color-danger-hover); }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+.btn--ghost:hover:not(:disabled) { background: var(--color-surface-alt); }
+
+.btn--icon {
+  padding: 6px;
+  border-color: transparent;
+}
+.btn--icon:hover:not(:disabled) {
+  background: var(--color-surface-alt);
+  border-color: transparent;
+}
+
+.btn svg {
+  flex-shrink: 0;
+  display: block;
+}
+
+/* ---- Modal de confirmação ---- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-overlay[hidden] { display: none; }
+
+.modal-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+
+.modal-card p {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  color: var(--color-text);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

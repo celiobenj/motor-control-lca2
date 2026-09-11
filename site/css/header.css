@@ -1,0 +1,108 @@
+/* ============================================================
+   header.css — barra superior fixa com status serial e ações
+   ============================================================ */
+
+#app-header {
+  height: var(--header-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  gap: 20px;
+  z-index: 10;
+}
+
+/* ---- Logo e título ---- */
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.header-logo img {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+.header-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* ---- Bloco de status serial (centro) ---- */
+.header-serial {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  justify-content: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+  border: 1px solid transparent;
+}
+
+/* Indicador circular de estado */
+.badge::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background var(--transition);
+}
+
+.badge--disconnected {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: #e8b4b4;
+}
+.badge--disconnected::before { background: var(--color-danger); }
+
+.badge--waiting {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-color: #e8d080;
+}
+.badge--waiting::before { background: var(--color-warning); }
+
+.badge--connected {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: #a8d8a8;
+}
+.badge--connected::before { background: var(--color-success); }
+
+/* Nome da porta exibido ao lado do badge */
+.port-name {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* ---- Botões de ação (direita) ---- */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}

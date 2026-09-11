@@ -1,0 +1,158 @@
+/* ============================================================
+   config.css — painel esquerdo de configuração (40%)
+   ============================================================ */
+
+#config-panel {
+  height: 100%;
+  overflow-y: auto;
+  border-right: 1px solid var(--color-border);
+  padding: var(--panel-padding) 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--color-bg);
+}
+
+/* ---- Grupo de configuração ---- */
+.config-group {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.config-group:first-child { padding-top: 4px; }
+.config-group:last-child  { border-bottom: none; flex: 1; }
+
+.group-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+/* ---- Radio buttons de modo ---- */
+.radio-group {
+  display: flex;
+  gap: 20px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--color-text);
+  user-select: none;
+}
+
+.radio-label input[type="radio"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--color-primary);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* ---- Linhas de input ---- */
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.input-row:last-of-type { margin-bottom: 0; }
+
+.input-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  width: 64px;
+  flex-shrink: 0;
+}
+
+.input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Input base monoespaçado */
+.input-mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 6px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  outline: none;
+  width: 100%;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.input-mono:focus { border-color: var(--color-primary); }
+
+.input-mono.is-invalid {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.input-narrow {
+  width: 72px;
+  flex: none;
+}
+
+.input-unit {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ---- Exibição da equação em KaTeX ---- */
+.katex-container {
+  margin-top: 18px;
+  padding: 14px 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  text-align: center;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.katex-container .katex-placeholder {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-family: var(--font-body);
+}
+
+/* Garante que KaTeX não quebre o layout */
+.katex-container .katex-html {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Compatibilidade com aviso de navegador */
+#compat-warning {
+  background: var(--color-warning-bg);
+  border: 1px solid #e8d080;
+  color: var(--color-warning);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  line-height: 1.5;
+}

@@ -1,0 +1,109 @@
+/* ============================================================
+   charts.css — coluna direita com barra de ferramentas e gráficos (60%)
+   ============================================================ */
+
+#charts-area {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+/* ---- Barra de ferramentas dos gráficos ---- */
+#chart-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-shrink: 0;
+  height: 44px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+/* Select de janela de tempo */
+.toolbar-select {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+.toolbar-select:focus { border-color: var(--color-primary); }
+
+/* Label compacto no toolbar */
+.toolbar-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* Radio buttons compactos no toolbar */
+.toolbar-radio {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--color-text);
+  cursor: pointer;
+}
+.toolbar-radio input[type="radio"] {
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* ---- Contêineres dos gráficos ---- */
+.chart-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Divisor entre os dois gráficos */
+.chart-divider {
+  height: 1px;
+  background: var(--color-border);
+  flex-shrink: 0;
+}
+
+/* Rótulo do gráfico (aparece no canto superior esquerdo, sobre o canvas) */
+.chart-label {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
+}
+
+/* Garante que o canvas do Chart.js preencha o contêiner */
+.chart-container canvas {
+  display: block;
+}
