@@ -2,1304 +2,349 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-  <title>Controle de Motor - Interface Serial</title>
-  <!-- Chart.js para plotagem grafica em tempo real -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LCA2 - Controle de Motor</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      background: #FFFFFF;
-      color: #1A1A1A;
-      padding: 20px 0 40px;
-      min-width: 320px;
-    }
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 
-    .container {
-      max-width: 920px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 0 clamp(12px, 3vw, 24px);
-    }
-
-    /* Cabecalho Principal */
-    header {
-      border-bottom: 3px solid #1A3A5C;
-      padding-bottom: 12px;
-      margin-bottom: 20px;
-    }
-
-    h1 {
-      font-size: clamp(1.2rem, 3vw, 1.6rem);
-      font-weight: 700;
-      color: #1A3A5C;
-      letter-spacing: 0.01em;
-    }
-
-    /* Aviso de Navegador sem Web Serial */
-    #serial-compat-warning {
-      display: none;
-      background: #FDF2F2;
-      border: 2px solid #C53030;
-      color: #742A2A;
-      padding: 12px 16px;
-      border-radius: 4px;
-      font-weight: 600;
-      margin-bottom: 20px;
-      font-size: 0.9rem;
-      line-height: 1.5;
-    }
-
-    /* Barra de Conexao Serial */
-    .serial-bar {
-      background: #F8F9FA;
-      border: 2px solid #333333;
-      border-radius: 4px;
-      padding: 14px 18px;
-      margin-bottom: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .serial-info {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 12px 18px;
-      font-size: 0.93rem;
-    }
-
-    .status-badge {
-      padding: 4px 12px;
-      border-radius: 3px;
-      font-weight: 700;
-      font-size: 0.85rem;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-    }
-
-    .status-badge.desconectado {
-      background: #FCE8E8;
-      color: #A02020;
-      border: 2px solid #C53030;
-    }
-
-    .status-badge.conectado {
-      background: #E6F4EA;
-      color: #1E6B2D;
-      border: 2px solid #2E7D32;
-    }
-
-    .status-badge.aguardando {
-      background: #FFF8E1;
-      color: #B78103;
-      border: 2px solid #D99B00;
-    }
-
-    .port-name {
-      font-weight: 600;
-      color: #333333;
-    }
-
-    .baud-rate {
-      color: #555555;
-      font-size: 0.85rem;
-    }
-
-    /* Sistema de Abas */
-    .tabs-nav {
-      display: flex;
-      border-bottom: 2px solid #333333;
-      margin-bottom: 24px;
-      gap: 4px;
-    }
-
-    .tab-button {
-      background: #EAECEF;
-      border: 2px solid #333333;
-      border-bottom: none;
-      border-radius: 4px 4px 0 0;
-      padding: 10px 24px;
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: #333333;
-      cursor: pointer;
-      margin-bottom: -2px;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .tab-button:hover {
-      background: #D8DCE2;
-    }
-
-    .tab-button.active {
-      background: #FFFFFF;
-      color: #1A3A5C;
-      border-top: 3px solid #1A3A5C;
-      border-bottom: 2px solid #FFFFFF;
-    }
-
-    .tab-pane {
-      display: none;
-    }
-
-    .tab-pane.active {
-      display: block;
-    }
-
-    /* Secoes comuns */
-    section {
-      margin-bottom: 22px;
-      border: 2px solid #333333;
-      border-radius: 4px;
-      padding: clamp(14px, 3vw, 22px) clamp(14px, 3vw, 24px);
-    }
-
-    section h2 {
-      font-size: clamp(0.85rem, 2.2vw, 1rem);
-      font-weight: 700;
-      color: #1A3A5C;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 14px;
-    }
-
-    .info-box {
-      background: #F2F4F7;
-      border-left: 4px solid #1A3A5C;
-      padding: 10px 14px;
-      margin-bottom: 16px;
-      font-size: clamp(0.78rem, 2vw, 0.88rem);
-      line-height: 1.5;
-      color: #333333;
-    }
-
-    .info-box code {
-      font-family: 'Courier New', Courier, monospace;
-      background: #E0E4EC;
-      padding: 1px 5px;
-      border-radius: 2px;
-    }
-
-    /* Linhas de formulario */
-    .form-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px 12px;
-      margin-bottom: 14px;
-    }
-
-    .form-row label {
-      font-size: clamp(0.85rem, 2.2vw, 0.93rem);
-      font-weight: 600;
-      min-width: 140px;
-    }
-
-    .form-row input[type="text"],
-    .form-row input[type="number"],
-    .form-row select {
-      min-width: 120px;
-      width: clamp(120px, 40vw, 320px);
-      padding: 8px 10px;
-      font-size: clamp(0.85rem, 2.2vw, 0.93rem);
-      border: 2px solid #333333;
-      border-radius: 3px;
-      background: #FFFFFF;
-      color: #1A1A1A;
-      outline: none;
-    }
-
-    .form-row input[type="text"]:focus,
-    .form-row input[type="number"]:focus,
-    .form-row select:focus {
-      border-color: #1A3A5C;
-    }
-
-    .form-row input.input-error {
-      border-color: #C53030;
-      background: #FDF2F2;
-    }
-
-    .form-row .unit {
-      font-size: clamp(0.78rem, 2vw, 0.85rem);
-      color: #555555;
-    }
-
-    /* Radio buttons de modo */
-    .mode-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px 32px;
-    }
-
-    .mode-group label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: clamp(0.9rem, 2.5vw, 1rem);
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .mode-group input[type="radio"] {
-      width: 18px;
-      height: 18px;
-      accent-color: #1A3A5C;
-    }
-
-    /* Preview da equacao */
-    .eq-preview {
-      margin-top: 14px;
-      padding: 12px 14px;
-      background: #F2F4F7;
-      border: 1px solid #CCCCCC;
-      border-radius: 3px;
-      font-family: 'Courier New', Courier, monospace;
-      font-size: clamp(0.78rem, 2vw, 0.88rem);
-      color: #1A1A1A;
-      white-space: pre;
-      overflow-x: auto;
-      min-height: 38px;
-    }
-
-    .eq-preview.vazio {
-      color: #777777;
-      font-style: italic;
-      font-family: Arial, sans-serif;
-      white-space: normal;
-    }
-
-    /* Botoes */
-    .btn-group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-    }
-
-    button {
-      padding: clamp(9px, 2vw, 11px) clamp(16px, 4vw, 26px);
-      font-size: clamp(0.85rem, 2.2vw, 0.95rem);
-      font-weight: 700;
-      border: 2px solid transparent;
-      border-radius: 3px;
-      cursor: pointer;
-      transition: opacity 0.15s, background 0.15s;
-    }
-
-    button:hover:not(:disabled) {
-      opacity: 0.85;
-    }
-
-    button:disabled {
-      opacity: 0.45;
-      cursor: not-allowed;
-    }
-
-    .btn-primary {
-      background: #1A3A5C;
-      color: #FFFFFF;
-      border-color: #1A3A5C;
-    }
-
-    .btn-secondary {
-      background: #333333;
-      color: #FFFFFF;
-      border-color: #333333;
-    }
-
-    .btn-outline {
-      background: #FFFFFF;
-      color: #1A1A1A;
-      border-color: #333333;
-    }
-
-    .btn-danger {
-      background: #FFFFFF;
-      color: #A02020;
-      border-color: #C53030;
-    }
-
-    .btn-danger:hover:not(:disabled) {
-      background: #FCE8E8;
-    }
-
-    /* Mensagens de feedback */
-    #status-msg {
-      margin-top: 14px;
-      padding: 10px 14px;
-      border-radius: 3px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      display: none;
-    }
-
-    #status-msg.ok {
-      background: #E6F4EA;
-      color: #1E6B2D;
-      border: 2px solid #2E7D32;
-      display: block;
-    }
-
-    #status-msg.erro {
-      background: #FCE8E8;
-      color: #A02020;
-      border: 2px solid #C53030;
-      display: block;
-    }
-
-    hr.sep {
-      border: none;
-      border-top: 1px solid #CCCCCC;
-      margin: 14px 0;
-    }
-
-    /* Controles do Grafico */
-    .chart-toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-      background: #F8F9FA;
-      border: 1px solid #CCCCCC;
-      border-radius: 4px;
-      padding: 12px 14px;
-    }
-
-    .toolbar-group {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .toolbar-group label {
-      font-weight: 600;
-      font-size: 0.88rem;
-    }
-
-    .toolbar-group select {
-      padding: 6px 10px;
-      border: 2px solid #333333;
-      border-radius: 3px;
-      font-size: 0.88rem;
-      background: #FFFFFF;
-      color: #1A1A1A;
-      outline: none;
-    }
-
-    .chart-wrapper {
-      position: relative;
-      width: 100%;
-      height: clamp(320px, 50vh, 480px);
-      background: #FFFFFF;
-      border: 1px solid #CCCCCC;
-      border-radius: 4px;
-      padding: 8px;
-    }
-
-    .export-box {
-      margin-top: 16px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      background: #F8F9FA;
-      border: 1px solid #CCCCCC;
-      border-radius: 4px;
-      padding: 12px 14px;
-    }
-
-    .export-options {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .export-options label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .export-options input[type="radio"] {
-      accent-color: #1A3A5C;
-    }
-
-    /* Modal de Confirmacao */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.45);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-    }
-
-    .modal-overlay.active {
-      display: flex;
-    }
-
-    .modal-card {
-      background: #FFFFFF;
-      border: 2px solid #333333;
-      border-radius: 4px;
-      max-width: 440px;
-      width: 100%;
-      padding: 22px 24px;
-    }
-
-    .modal-card h3 {
-      font-size: 1.1rem;
-      color: #1A3A5C;
-      margin-bottom: 12px;
-    }
-
-    .modal-card p {
-      font-size: 0.92rem;
-      line-height: 1.5;
-      color: #333333;
-      margin-bottom: 20px;
-    }
-
-    .modal-actions {
-      display: flex;
-      justify-content: flex-end;
-      gap: 12px;
-    }
-  </style>
+  <!-- CSS da aplicação -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/header.css">
+  <link rel="stylesheet" href="css/config.css">
+  <link rel="stylesheet" href="css/charts.css">
 </head>
 <body>
-<div class="container">
-  <header>
-    <h1>Controle de Motor com Encoder - ESP32</h1>
-  </header>
 
-  <!-- Aviso de Incompatibilidade de Navegador -->
-  <div id="serial-compat-warning">
-    Atencao: Seu navegador nao possui suporte a Web Serial API. Para conectar a ESP32 via cabo USB, utilize um navegador compativel como Google Chrome, Microsoft Edge ou Opera.
+<!-- ===================================================================
+     HEADER SUPERIOR
+     =================================================================== -->
+<header id="app-header">
+
+  <div class="header-logo">
+    <img src="favicon.svg" alt="Logo">
+    <span class="header-title">LCA2 - Controle de Motor</span>
   </div>
 
-  <!-- Barra de Conexao Serial -->
-  <div class="serial-bar">
-    <div class="serial-info">
-      <div>
-        Status: <span id="serial-status-badge" class="status-badge desconectado">Desconectado</span>
-      </div>
-      <div>
-        Porta: <span id="serial-port-name" class="port-name">Nenhuma</span>
-      </div>
-      <div class="baud-rate">Baud: 115200</div>
-    </div>
-    <div class="btn-group">
-      <button id="btn-serial-connect" class="btn-primary" type="button">Conectar Porta Serial</button>
-      <button id="btn-serial-disconnect" class="btn-secondary" type="button" style="display:none;">Desconectar</button>
-    </div>
+  <div class="header-serial">
+    <span id="serial-badge" class="badge badge--disconnected" data-state="disconnected">Desconectado</span>
+    <span id="serial-port-name" class="port-name"></span>
+
+    <button id="btn-connect" class="btn btn--ghost" type="button" title="Conectar porta serial">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M8 2V9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M5.5 6.5L8 9.5L10.5 6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="5" y="10" width="6" height="4" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+      </svg>
+      Conectar
+    </button>
+
+    <button id="btn-disconnect" class="btn btn--ghost" type="button" title="Desconectar" hidden>
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      Desconectar
+    </button>
   </div>
 
-  <!-- Navegacao das Abas -->
-  <nav class="tabs-nav" aria-label="Abas de navegacao">
-    <button class="tab-button active" type="button" onclick="switchTab('config')">Configuracao</button>
-    <button class="tab-button" type="button" onclick="switchTab('chart')">Grafico</button>
-  </nav>
+  <div class="header-actions">
+    <button id="btn-apply" class="btn btn--primary" type="button" disabled title="Enviar configuração para a ESP32">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M2 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Enviar
+    </button>
 
-  <!-- ==================== ABA 1: CONFIGURACAO ==================== -->
-  <main id="tab-config" class="tab-pane active">
-    <!-- MODO DE CONTROLE -->
-    <section>
-      <h2>Modo de Controle</h2>
-      <div class="mode-group">
-        <label>
-          <input type="radio" name="mode" id="mode-speed" value="speed" checked>
-          Controle de Velocidade (rad/s)
+    <button id="btn-stop" class="btn btn--danger" type="button" disabled title="Parar motor imediatamente">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/>
+      </svg>
+      Parar
+    </button>
+  </div>
+</header>
+
+<!-- ===================================================================
+     CONTEÚDO PRINCIPAL: CONFIGURAÇÃO | HANDLE | GRÁFICOS
+     =================================================================== -->
+<div id="app-content">
+
+  <!-- ---------------------------------------------------------------
+       PAINEL DE CONFIGURAÇÃO (esquerda — 40%)
+       --------------------------------------------------------------- -->
+  <aside id="config-panel">
+
+    <!-- Aviso de incompatibilidade de navegador -->
+    <div id="compat-warning" class="config-group" hidden>
+      <p style="font-size:13px;color:#B78103;line-height:1.5;">
+        Este navegador não suporta a Web Serial API.<br>
+        Utilize Google Chrome, Microsoft Edge ou Opera.
+      </p>
+    </div>
+
+    <!-- ---- MODO DE CONTROLE ---- -->
+    <div class="config-group">
+      <div class="group-header">
+        <span class="group-label">Modo de Controle</span>
+        <div class="group-actions">
+          <!-- Ajuda do modo -->
+          <button class="btn-group-action" id="btn-help-mode" type="button" title="Ajuda sobre o modo de controle">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6.2 6.3a1.9 1.9 0 1 1 1.8 2.4V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <circle cx="8" cy="12" r="0.75" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="radio-group">
+        <label class="radio-label">
+          <input type="radio" name="mode" value="speed" checked>
+          Velocidade (rad/s)
         </label>
-        <label>
-          <input type="radio" name="mode" id="mode-position" value="position">
-          Controle de Posicao (graus)
+        <label class="radio-label">
+          <input type="radio" name="mode" value="position">
+          Posição (graus)
         </label>
       </div>
-    </section>
+    </div>
 
-    <!-- REFERENCIA CICLICA -->
-    <section>
-      <h2>Referencia Ciclica</h2>
-      <div class="info-box">
-        Informe os niveis que a referencia deve assumir ciclicamente, separados por virgula.
-        O sistema percorre os niveis em sequencia e reinicia ao atingir o ultimo.
+    <!-- ---- REFERÊNCIA ---- -->
+    <div class="config-group">
+      <div class="group-header">
+        <span class="group-label">Referência</span>
+        <div class="group-actions">
+          <!-- Resetar referência -->
+          <button class="btn-group-action" id="btn-reset-ref" type="button" title="Restaurar valores padrão">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M8 1v4l3-2z" fill="currentColor"/>
+            </svg>
+          </button>
+          <!-- Ajuda -->
+          <button class="btn-group-action" id="btn-help-ref" type="button" title="Ajuda sobre a referência">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6.2 6.3a1.9 1.9 0 1 1 1.8 2.4V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <circle cx="8" cy="12" r="0.75" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div class="form-row">
-        <label for="ref-levels">Niveis:</label>
-        <input type="text" id="ref-levels" value="5, 12, 6, 2" placeholder="ex: 5, 12, 6, 2">
-        <span class="unit" id="ref-unit">rad/s</span>
+      <div class="input-row">
+        <span class="input-label">Níveis</span>
+        <div class="input-wrap">
+          <input type="text" id="ref-levels" class="input-mono"
+                 value="5, 12, 6, 2"
+                 placeholder="Ex: 5, 12, 6, 2"
+                 spellcheck="false" autocomplete="off">
+          <span class="input-unit" id="ref-unit">rad/s</span>
+        </div>
       </div>
 
-      <div class="form-row">
-        <label for="ref-interval">Intervalo por nivel:</label>
-        <input type="number" id="ref-interval" min="1" step="1" value="6" style="width:clamp(80px,20vw,120px)">
-        <span class="unit">segundos</span>
+      <div class="input-row">
+        <span class="input-label">Intervalo</span>
+        <div class="input-wrap">
+          <input type="number" id="ref-interval" class="input-mono input-narrow"
+                 min="1" step="1" value="6">
+          <span class="input-unit">s</span>
+        </div>
       </div>
-    </section>
+    </div>
 
-    <!-- EQUACAO DE DIFERENCAS -->
-    <section>
-      <h2>Equacao de Diferencas do Controlador</h2>
-
-      <div class="info-box">
-        Informe os coeficientes como vetores separados por virgula.<br>
-        A ordem do controlador e determinada pelo vetor com mais elementos.<br>
-        Exemplo para um controlador PI:
-        <code>e[] = 7.98, -6.781</code> &nbsp; <code>u[] = 0.999</code>
+    <!-- ---- EQUAÇÃO DE DIFERENÇAS ---- -->
+    <div class="config-group">
+      <div class="group-header">
+        <span class="group-label">Equação de Diferenças</span>
+        <div class="group-actions">
+          <!-- Resetar equação -->
+          <button class="btn-group-action" id="btn-reset-eq" type="button" title="Restaurar coeficientes padrão">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M8 1v4l3-2z" fill="currentColor"/>
+            </svg>
+          </button>
+          <!-- Ajuda -->
+          <button class="btn-group-action" id="btn-help-eq" type="button" title="Ajuda sobre a equação de diferenças">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6.2 6.3a1.9 1.9 0 1 1 1.8 2.4V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <circle cx="8" cy="12" r="0.75" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <div class="form-row">
-        <label for="vec-e">Coeficientes e[ ]:</label>
-        <input type="text" id="vec-e" placeholder="ex: 7.98, -6.781, 0.12" oninput="updatePreview()">
+      <div class="input-row">
+        <span class="input-label">e[ ]</span>
+        <input type="text" id="vec-e" class="input-mono"
+               value="1"
+               placeholder="Ex: 1"
+               spellcheck="false" autocomplete="off">
       </div>
 
-      <div class="form-row">
-        <label for="vec-u">Coeficientes u[ ]:</label>
-        <input type="text" id="vec-u" placeholder="ex: 0.999, 0.001" oninput="updatePreview()">
+      <div class="input-row">
+        <span class="input-label">u[ ]</span>
+        <input type="text" id="vec-u" class="input-mono"
+               value="1"
+               placeholder="Ex: 1"
+               spellcheck="false" autocomplete="off">
       </div>
 
-      <hr class="sep">
-
-      <div id="eq-preview" class="eq-preview vazio">
-        Digite os coeficientes para visualizar a equacao do controlador.
+      <!-- Preview KaTeX -->
+      <div id="katex-display" class="katex-container">
+        <span class="katex-placeholder">Insira os coeficientes</span>
       </div>
-    </section>
+    </div>
 
-    <!-- ACOES -->
-    <section>
-      <h2>Acoes</h2>
-      <div class="btn-group">
-        <button id="btn-apply" class="btn-primary" type="button" disabled title="Conecte a porta serial para aplicar">Aplicar e Iniciar</button>
-        <button id="btn-stop" class="btn-secondary" type="button" disabled title="Conecte a porta serial para parar">Parar Motor</button>
-      </div>
-      <div id="status-msg"></div>
-    </section>
-  </main>
+  </aside>
 
-  <!-- ==================== ABA 2: GRAFICO ==================== -->
-  <section id="tab-chart" class="tab-pane">
-    <h2>Visualizacao Grafica em Tempo Real</h2>
+  <!-- Handle vertical: arrastar para redimensionar config vs. gráficos -->
+  <div id="resize-h" class="resize-handle resize-handle--v" title="Arrastar para redimensionar"></div>
 
-    <!-- Barra de Ferramentas do Grafico -->
-    <div class="chart-toolbar">
+  <!-- ---------------------------------------------------------------
+       ÁREA DE GRÁFICOS (direita — 60%)
+       --------------------------------------------------------------- -->
+  <main id="charts-area">
+
+    <!-- Barra de ferramentas -->
+    <div id="chart-toolbar">
+
+      <!-- Janela de tempo -->
       <div class="toolbar-group">
-        <label for="time-window-select">Janela de tempo:</label>
-        <select id="time-window-select" onchange="onTimeWindowChange()">
-          <option value="0">Sem janela (tudo)</option>
-          <option value="5">Ultimos 5 segundos</option>
-          <option value="15">Ultimos 15 segundos</option>
-          <option value="30" selected>Ultimos 30 segundos</option>
-          <option value="60">Ultimo 1 minuto</option>
+        <span class="toolbar-label">Janela</span>
+        <select id="time-window" class="toolbar-select">
+          <option value="0">Tudo</option>
+          <option value="5">5 s</option>
+          <option value="15" selected>15 s</option>
+          <option value="30">30 s</option>
+          <option value="60">1 min</option>
         </select>
       </div>
 
+      <div class="toolbar-sep"></div>
+
+      <!-- Pausar / Limpar -->
       <div class="toolbar-group">
-        <button id="btn-chart-pause" class="btn-outline" type="button" onclick="togglePause()">Pausar Grafico</button>
-        <button id="btn-chart-clear" class="btn-danger" type="button" onclick="openClearModal()">Limpar Dados</button>
+        <button id="btn-pause" class="btn btn--icon btn--ghost" type="button" title="Pausar gráfico">
+          <span id="icon-pause">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/>
+              <rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/>
+            </svg>
+          </span>
+          <span id="icon-resume" hidden>
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M4 3L13 8L4 13V3Z" fill="currentColor"/>
+            </svg>
+          </span>
+        </button>
+
+        <button id="btn-clear" class="btn btn--icon btn--ghost" type="button" title="Limpar dados acumulados">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M2 4H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M5 4V2.5C5 2.22 5.22 2 5.5 2H10.5C10.78 2 11 2.22 11 2.5V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M3 4L3.8 13.5C3.9 13.8 4.15 14 4.5 14H11.5C11.85 14 12.1 13.8 12.2 13.5L13 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6.5 7V11M9.5 7V11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="toolbar-sep"></div>
+
+      <!-- Exportar CSV -->
+      <div class="toolbar-group">
+        <span class="toolbar-label">Exportar</span>
+        <label class="toolbar-radio">
+          <input type="radio" id="csv-all" name="csv-range" value="all" checked>
+          Tudo
+        </label>
+        <label class="toolbar-radio">
+          <input type="radio" id="csv-visible" name="csv-range" value="visible">
+          Visível
+        </label>
+        <button id="btn-export" class="btn btn--ghost" type="button" title="Exportar CSV">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 2V10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M5 7.5L8 10.5L11 7.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 13.5H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          CSV
+        </button>
       </div>
     </div>
 
-    <!-- Area do Canvas Chart.js -->
-    <div class="chart-wrapper">
-      <canvas id="controlChart"></canvas>
+    <!-- Gráfico 1: Referência x Medição -->
+    <div class="chart-container" id="chart1-container">
+      <span class="chart-label">Referência / Medição</span>
+      <canvas id="chart-main"></canvas>
     </div>
 
-    <!-- Painel de Exportacao CSV -->
-    <div class="export-box">
-      <div class="export-options">
-        <span>Intervalo para exportacao:</span>
-        <label>
-          <input type="radio" name="csv-range" value="all" checked>
-          Toda a serie temporal
-        </label>
-        <label>
-          <input type="radio" name="csv-range" value="visible">
-          Apenas intervalo visivel
-        </label>
-      </div>
-      <button class="btn-primary" type="button" onclick="exportCsv()">Exportar CSV</button>
+    <!-- Handle horizontal: arrastar para redimensionar gráfico 1 e 2 -->
+    <div id="resize-charts" class="resize-handle resize-handle--h" title="Arrastar para redimensionar"></div>
+
+    <!-- Gráfico 2: Sinal de controle u -->
+    <div class="chart-container" id="chart2-container">
+      <span class="chart-label">Sinal de Controle u</span>
+      <canvas id="chart-control"></canvas>
     </div>
-  </section>
+
+  </main>
 </div>
 
-<!-- Modal de Confirmacao de Limpeza de Dados -->
-<div id="clear-modal" class="modal-overlay">
+<!-- ===================================================================
+     MODAIS
+     =================================================================== -->
+
+<!-- Confirmação: limpar dados -->
+<div id="modal-clear" class="modal-overlay" hidden>
   <div class="modal-card">
-    <h3>Confirmar Limpeza</h3>
-    <p>Deseja realmente limpar todos os dados da serie temporal acumulados ate agora? Essa acao nao podera ser desfeita.</p>
+    <p>Limpar todos os dados acumulados? Esta ação não poderá ser desfeita.</p>
     <div class="modal-actions">
-      <button class="btn-outline" type="button" onclick="closeClearModal()">Cancelar</button>
-      <button class="btn-danger" type="button" onclick="confirmClearData()">Sim, Limpar</button>
+      <button id="btn-modal-clear-cancel"  class="btn btn--ghost">Cancelar</button>
+      <button id="btn-modal-clear-confirm" class="btn btn--danger">Limpar</button>
     </div>
   </div>
 </div>
 
-<script>
-// ============================================================
-// 1. VERIFICACAO DE COMPATIBILIDADE E GERENCIAMENTO DE ABAS
-// ============================================================
+<!-- Confirmação: restaurar padrões -->
+<div id="modal-reset" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <p id="modal-reset-text">Restaurar os valores padrão?</p>
+    <div class="modal-actions">
+      <button id="btn-modal-reset-cancel"  class="btn btn--ghost">Cancelar</button>
+      <button id="btn-modal-reset-confirm" class="btn btn--primary">Restaurar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ajuda contextual -->
+<div id="modal-help" class="modal-overlay" hidden>
+  <div class="modal-card modal-card--wide">
+    <div class="modal-help-header">
+      <h3 id="modal-help-title"></h3>
+      <button id="btn-modal-help-close" class="btn btn--icon btn--ghost" type="button" title="Fechar">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div id="modal-help-body" class="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn--primary" type="button" onclick="document.getElementById('modal-help').hidden=true">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     SCRIPTS
+     =================================================================== -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script type="module" src="js/main.js"></script>
 
-if (!('serial' in navigator)) {
-  document.getElementById('serial-compat-warning').style.display = 'block';
-  document.getElementById('btn-serial-connect').disabled = true;
-}
-
-function switchTab(tabId) {
-  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
-
-  if (tabId === 'config') {
-    document.querySelector('.tab-button:nth-child(1)').classList.add('active');
-    document.getElementById('tab-config').classList.add('active');
-  } else {
-    document.querySelector('.tab-button:nth-child(2)').classList.add('active');
-    document.getElementById('tab-chart').classList.add('active');
-    // Atualiza redimensionamento do canvas quando exibido
-    if (chartInstance) {
-      chartInstance.resize();
-    }
-  }
-}
-
-// ============================================================
-// 2. LOGICA DA ABA DE CONFIGURACAO
-// ============================================================
-
-const DEFAULT_LEVELS = { speed: '5, 12, 6, 2', position: '30, 90, 150, 100' };
-const UNIT_LABELS    = { speed: 'rad/s',        position: 'graus' };
-let levelsEditado = false;
-
-document.getElementById('ref-levels').addEventListener('input', () => {
-  levelsEditado = true;
-});
-
-function onModeChange() {
-  const mode = document.querySelector('input[name="mode"]:checked').value;
-  document.getElementById('ref-unit').textContent = UNIT_LABELS[mode];
-  if (!levelsEditado) {
-    document.getElementById('ref-levels').value = DEFAULT_LEVELS[mode];
-  }
-  // Atualiza label da grandeza no grafico
-  updateChartMeasureLabel(mode);
-  updatePreview();
-}
-
-document.querySelectorAll('input[name="mode"]').forEach(el => {
-  el.addEventListener('change', onModeChange);
-});
-
-function parseVec(str) {
-  const s = str.trim();
-  if (!s) return [];
-  const parts = s.split(',');
-  const nums = [];
-  for (const p of parts) {
-    const v = parseFloat(p.trim());
-    if (isNaN(v)) return null;
-    nums.push(v);
-  }
-  return nums;
-}
-
-function fmt(v) {
-  return parseFloat(v.toPrecision(6)).toString();
-}
-
-function updatePreview() {
-  const preview = document.getElementById('eq-preview');
-  const strE    = document.getElementById('vec-e').value;
-  const strU    = document.getElementById('vec-u').value;
-
-  const vecE = parseVec(strE);
-  const vecU = parseVec(strU);
-
-  document.getElementById('vec-e').classList.toggle('input-error', vecE === null && strE.trim() !== '');
-  document.getElementById('vec-u').classList.toggle('input-error', vecU === null && strU.trim() !== '');
-
-  if ((vecE === null && strE.trim() !== '') || (vecU === null && strU.trim() !== '')) {
-    preview.textContent = 'Formato invalido — use numeros separados por virgula.';
-    preview.className   = 'eq-preview vazio';
-    return;
-  }
-
-  const eArr = vecE || [];
-  const uArr = vecU || [];
-
-  if (eArr.length === 0 && uArr.length === 0) {
-    preview.textContent = 'Digite os coeficientes para visualizar a equacao do controlador.';
-    preview.className   = 'eq-preview vazio';
-    return;
-  }
-
-  const termos = [];
-
-  for (let i = 0; i < eArr.length; i++) {
-    if (eArr[i] === 0) continue;
-    const label = i === 0 ? 'e[k]' : `e[k-${i}]`;
-    termos.push({ coef: eArr[i], label });
-  }
-
-  for (let i = 0; i < uArr.length; i++) {
-    if (uArr[i] === 0) continue;
-    const label = `u[k-${i + 1}]`;
-    termos.push({ coef: uArr[i], label });
-  }
-
-  if (termos.length === 0) {
-    preview.textContent = 'u[k] = 0  (todos os coeficientes sao zero)';
-    preview.className   = 'eq-preview';
-    return;
-  }
-
-  let eq = 'u[k] = ';
-  for (let t = 0; t < termos.length; t++) {
-    const { coef, label } = termos[t];
-    if (t === 0) {
-      eq += `${fmt(coef)} * ${label}`;
-    } else {
-      eq += coef >= 0 ? ` + ${fmt(coef)} * ${label}`
-                      : ` - ${fmt(Math.abs(coef))} * ${label}`;
-    }
-  }
-
-  preview.textContent = eq;
-  preview.className   = 'eq-preview';
-}
-
-function showStatus(msg, ok) {
-  const el = document.getElementById('status-msg');
-  el.textContent = msg;
-  el.className   = ok ? 'ok' : 'erro';
-}
-
-// ============================================================
-// 3. COMUNICACAO COM A WEB SERIAL API
-// ============================================================
-
-let serialPort   = null;
-let serialReader = null;
-let serialWriter = null;
-let keepReading  = false;
-let isConnected  = false;
-let pingResolve  = null;
-
-function setConnectionUI(state, portInfo) {
-  const badge    = document.getElementById('serial-status-badge');
-  const portName = document.getElementById('serial-port-name');
-  const btnConn  = document.getElementById('btn-serial-connect');
-  const btnDisc  = document.getElementById('btn-serial-disconnect');
-  const btnApply = document.getElementById('btn-apply');
-  const btnStop  = document.getElementById('btn-stop');
-
-  if (state === 'conectado') {
-    isConnected = true;
-    badge.textContent = 'Conectado';
-    badge.className   = 'status-badge conectado';
-    portName.textContent = portInfo || 'ESP32';
-    btnConn.style.display = 'none';
-    btnDisc.style.display = 'inline-block';
-    btnApply.disabled = false;
-    btnStop.disabled  = false;
-    btnApply.removeAttribute('title');
-    btnStop.removeAttribute('title');
-  } else if (state === 'aguardando') {
-    isConnected = false;
-    badge.textContent = 'Aguardando ESP32';
-    badge.className   = 'status-badge aguardando';
-    portName.textContent = portInfo || 'Detectando...';
-    btnConn.style.display = 'none';
-    btnDisc.style.display = 'inline-block';
-    btnApply.disabled = true;
-    btnStop.disabled  = true;
-  } else {
-    isConnected = false;
-    badge.textContent = 'Desconectado';
-    badge.className   = 'status-badge desconectado';
-    portName.textContent = 'Nenhuma';
-    btnConn.style.display = 'inline-block';
-    btnDisc.style.display = 'none';
-    btnApply.disabled = true;
-    btnStop.disabled  = true;
-    btnApply.title = 'Conecte a porta serial para aplicar';
-    btnStop.title  = 'Conecte a porta serial para parar';
-  }
-}
-
-async function connectSerial() {
-  if (!('serial' in navigator)) return;
-
-  try {
-    serialPort = await navigator.serial.requestPort();
-    await serialPort.open({ baudRate: 115200 });
-
-    const info = serialPort.getInfo();
-    const portDesc = (info.usbVendorId && info.usbProductId)
-      ? `USB (${info.usbVendorId.toString(16).padStart(4, '0')}:${info.usbProductId.toString(16).padStart(4, '0')})`
-      : 'Porta Serial';
-
-    setConnectionUI('aguardando', portDesc);
-
-    serialWriter = serialPort.writable.getWriter();
-    keepReading  = true;
-
-    // Inicia loop de leitura de dados
-    readSerialLoop();
-
-    // Envia handshake de ping
-    await sendSerialLine(JSON.stringify({ cmd: 'ping' }));
-
-    // Timeout para resposta de handshake (3 segundos)
-    setTimeout(() => {
-      if (!isConnected && serialPort) {
-        // Se nao respondeu, mas conectou a porta, marca conectado para permitir operacao
-        setConnectionUI('conectado', portDesc);
-      }
-    }, 3000);
-
-  } catch (err) {
-    console.error('Erro ao abrir porta serial:', err);
-    setConnectionUI('desconectado');
-    showStatus('Falha ao abrir a porta serial: ' + err.message, false);
-  }
-}
-
-async function disconnectSerial() {
-  keepReading = false;
-
-  if (serialReader) {
-    try { await serialReader.cancel(); } catch (_) {}
-    serialReader = null;
-  }
-
-  if (serialWriter) {
-    try { await serialWriter.releaseLock(); } catch (_) {}
-    serialWriter = null;
-  }
-
-  if (serialPort) {
-    try { await serialPort.close(); } catch (_) {}
-    serialPort = null;
-  }
-
-  setConnectionUI('desconectado');
-}
-
-document.getElementById('btn-serial-connect').addEventListener('click', connectSerial);
-document.getElementById('btn-serial-disconnect').addEventListener('click', disconnectSerial);
-
-async function sendSerialLine(line) {
-  if (!serialWriter) {
-    throw new Error('Porta serial nao disponivel');
-  }
-  const encoder = new TextEncoder();
-  const data = encoder.encode(line + '\n');
-  await serialWriter.write(data);
-}
-
-async function readSerialLoop() {
-  const textDecoder = new TextDecoder();
-  let lineBuffer = '';
-
-  while (serialPort && serialPort.readable && keepReading) {
-    serialReader = serialPort.readable.getReader();
-    try {
-      while (true) {
-        const { value, done } = await serialReader.read();
-        if (done) break;
-        if (value) {
-          lineBuffer += textDecoder.decode(value, { stream: true });
-          const lines = lineBuffer.split('\n');
-          lineBuffer = lines.pop(); // Guarda pedaco incompleto
-          for (const line of lines) {
-            handleSerialIncomingLine(line.trim());
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('Erro na leitura serial:', err);
-    } finally {
-      serialReader.releaseLock();
-      serialReader = null;
-    }
-  }
-
-  setConnectionUI('desconectado');
-}
-
-// ============================================================
-// 4. PARSER DE MENSAGENS RECEBIDAS PELA SERIAL
-// ============================================================
-
-let currentCycleData = { ref: null, medida: null, u: null };
-
-function handleSerialIncomingLine(line) {
-  if (!line) return;
-
-  // 1. Resposta JSON (handshake ou status de comando)
-  if (line.startsWith('{')) {
-    try {
-      const data = JSON.parse(line);
-      if (data.status === 'ok') {
-        if (!isConnected) {
-          const info = serialPort ? serialPort.getInfo() : {};
-          const portDesc = (info.usbVendorId) ? 'ESP32 (USB)' : 'Porta Serial';
-          setConnectionUI('conectado', portDesc);
-        }
-      }
-    } catch (_) {}
-    return;
-  }
-
-  // 2. Status inicial da ESP32
-  if (line.startsWith('>status:pronto')) {
-    if (!isConnected) {
-      setConnectionUI('conectado', 'ESP32 Conectada');
-    }
-    return;
-  }
-
-  // 3. Telemetria Teleplot (>nome:valor)
-  if (line.startsWith('>')) {
-    const colonIdx = line.indexOf(':');
-    if (colonIdx > 1) {
-      const varName = line.substring(1, colonIdx);
-      const val = parseFloat(line.substring(colonIdx + 1));
-      if (!isNaN(val)) {
-        if (varName === 'ref') {
-          currentCycleData.ref = val;
-        } else if (varName === 'omega' || varName === 'angulo') {
-          currentCycleData.medida = val;
-        } else if (varName === 'u') {
-          currentCycleData.u = val;
-        }
-
-        // Quando completar o trio de telemetria, registra o ponto
-        if (currentCycleData.ref !== null && currentCycleData.medida !== null && currentCycleData.u !== null) {
-          pushDataPoint(currentCycleData.ref, currentCycleData.medida, currentCycleData.u);
-          currentCycleData = { ref: null, medida: null, u: null };
-        }
-      }
-    }
-  }
-}
-
-// Envio do comando de aplicacao via Serial
-document.getElementById('btn-apply').addEventListener('click', async () => {
-  const mode = document.querySelector('input[name="mode"]:checked').value;
-  const vecE = parseVec(document.getElementById('vec-e').value);
-  const vecU = parseVec(document.getElementById('vec-u').value);
-
-  if (vecE === null || vecU === null) {
-    showStatus('Coeficientes invalidos. Verifique o formato dos vetores.', false);
-    return;
-  }
-
-  if (vecE.length === 0 && vecU.length === 0) {
-    showStatus('Informe ao menos um coeficiente de e[] ou u[].', false);
-    return;
-  }
-
-  const order = Math.max(vecE.length, vecU.length);
-  const coeff_e = Array.from({ length: order }, (_, i) => vecE[i] ?? 0);
-  const coeff_u = Array.from({ length: order }, (_, i) => vecU[i] ?? 0);
-
-  const levelsRaw = document.getElementById('ref-levels').value.trim();
-  const levels    = parseVec(levelsRaw);
-  if (!levels || levels.length === 0) {
-    showStatus('Informe ao menos um nivel de referencia valido.', false);
-    return;
-  }
-
-  const intervalVal = parseInt(document.getElementById('ref-interval').value, 10);
-  if (isNaN(intervalVal) || intervalVal < 1) {
-    showStatus('Intervalo invalido. Informe um valor inteiro de ao menos 1 segundo.', false);
-    return;
-  }
-
-  const payload = { mode, order, coeff_e, coeff_u, levels, interval_s: intervalVal };
-
-  try {
-    await sendSerialLine(JSON.stringify(payload));
-    showStatus('Comando enviado via Serial com sucesso.', true);
-  } catch (err) {
-    showStatus('Falha no envio serial: ' + err.message, false);
-  }
-});
-
-// Envio do comando de parada via Serial
-document.getElementById('btn-stop').addEventListener('click', async () => {
-  try {
-    await sendSerialLine(JSON.stringify({ cmd: 'stop' }));
-    showStatus('Comando de parada enviado para a ESP32.', true);
-  } catch (err) {
-    showStatus('Falha ao enviar comando de parada: ' + err.message, false);
-  }
-});
-
-// ============================================================
-// 5. CHART.JS E GERENCIAMENTO DE SERIES TEMPORAIS
-// ============================================================
-
-// Armazenamento historico completo (para CSV e janela deslizante)
-let allSamples = []; // { t_ms, t_s, ref, medida, u }
-let timeOrigin = null;
-let isPaused   = false;
-let timeWindowSeconds = 30; // 0 = sem janela
-
-let chartInstance = null;
-
-function initChart() {
-  const ctx = document.getElementById('controlChart').getContext('2d');
-  chartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: [],
-      datasets: [
-        {
-          label: 'Referencia (ref)',
-          data: [],
-          borderColor: '#1A3A5C',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.1,
-          hidden: false
-        },
-        {
-          label: 'Medicao (omega)',
-          data: [],
-          borderColor: '#2E7D32',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.1,
-          hidden: false
-        },
-        {
-          label: 'Sinal de Controle (u)',
-          data: [],
-          borderColor: '#E65100',
-          backgroundColor: 'transparent',
-          borderWidth: 1.5,
-          borderDash: [4, 4],
-          pointRadius: 0,
-          tension: 0.1,
-          hidden: true // Oculto por padrao
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      interaction: {
-        mode: 'index',
-        intersect: false
-      },
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: {
-            font: { family: 'Arial', size: 12, weight: 'bold' },
-            color: '#1A1A1A'
-          }
-        },
-        tooltip: {
-          enabled: true
-        }
-      },
-      scales: {
-        x: {
-          title: {
-            display: true,
-            text: 'Tempo (segundos)',
-            font: { weight: 'bold' }
-          },
-          grid: { color: '#E0E0E0' }
-        },
-        y: {
-          title: {
-            display: true,
-            text: 'Amplitude',
-            font: { weight: 'bold' }
-          },
-          grid: { color: '#E0E0E0' }
-        }
-      }
-    }
-  });
-}
-
-function updateChartMeasureLabel(mode) {
-  if (!chartInstance) return;
-  const label = (mode === 'speed') ? 'Medicao (omega)' : 'Medicao (angulo)';
-  chartInstance.data.datasets[1].label = label;
-  chartInstance.update('none');
-}
-
-function pushDataPoint(ref, medida, u) {
-  const now = performance.now();
-  if (timeOrigin === null) {
-    timeOrigin = now;
-  }
-  const t_ms = Math.round(now - timeOrigin);
-  const t_s  = parseFloat((t_ms / 1000.0).toFixed(3));
-
-  // Armazena na memoria total
-  allSamples.push({ t_ms, t_s, ref, medida, u });
-
-  // Se o grafico estiver pausado, nao atualiza visualizacao
-  if (isPaused || !chartInstance) return;
-
-  renderChart();
-}
-
-function renderChart() {
-  if (!chartInstance) return;
-
-  let samplesToDisplay = allSamples;
-
-  // Janela deslizante de tempo
-  if (timeWindowSeconds > 0 && allSamples.length > 0) {
-    const latestT = allSamples[allSamples.length - 1].t_s;
-    const minT = latestT - timeWindowSeconds;
-    // Pega as amostras dentro do intervalo
-    let startIdx = 0;
-    for (let i = allSamples.length - 1; i >= 0; i--) {
-      if (allSamples[i].t_s < minT) {
-        startIdx = i + 1;
-        break;
-      }
-    }
-    samplesToDisplay = allSamples.slice(startIdx);
-  }
-
-  chartInstance.data.labels = samplesToDisplay.map(s => s.t_s.toFixed(2) + 's');
-  chartInstance.data.datasets[0].data = samplesToDisplay.map(s => s.ref);
-  chartInstance.data.datasets[1].data = samplesToDisplay.map(s => s.medida);
-  chartInstance.data.datasets[2].data = samplesToDisplay.map(s => s.u);
-
-  chartInstance.update('none');
-}
-
-function onTimeWindowChange() {
-  const sel = document.getElementById('time-window-select');
-  timeWindowSeconds = parseInt(sel.value, 10);
-  renderChart();
-}
-
-function togglePause() {
-  isPaused = !isPaused;
-  const btn = document.getElementById('btn-chart-pause');
-  if (isPaused) {
-    btn.textContent = 'Retomar Grafico';
-    btn.className   = 'btn-primary';
-  } else {
-    btn.textContent = 'Pausar Grafico';
-    btn.className   = 'btn-outline';
-    renderChart();
-  }
-}
-
-// Modal e Limpeza de Dados
-function openClearModal() {
-  document.getElementById('clear-modal').classList.add('active');
-}
-
-function closeClearModal() {
-  document.getElementById('clear-modal').classList.remove('active');
-}
-
-function confirmClearData() {
-  allSamples = [];
-  timeOrigin = null;
-  if (chartInstance) {
-    chartInstance.data.labels = [];
-    chartInstance.data.datasets.forEach(ds => ds.data = []);
-    chartInstance.update('none');
-  }
-  closeClearModal();
-}
-
-// ============================================================
-// 6. EXPORTACAO DE DADOS CSV
-// ============================================================
-
-function exportCsv() {
-  if (allSamples.length === 0) {
-    alert('Nenhum dado acumulado para exportar.');
-    return;
-  }
-
-  const rangeOption = document.querySelector('input[name="csv-range"]:checked').value;
-  let exportData = allSamples;
-
-  if (rangeOption === 'visible' && timeWindowSeconds > 0) {
-    const latestT = allSamples[allSamples.length - 1].t_s;
-    const minT = latestT - timeWindowSeconds;
-    let startIdx = 0;
-    for (let i = allSamples.length - 1; i >= 0; i--) {
-      if (allSamples[i].t_s < minT) {
-        startIdx = i + 1;
-        break;
-      }
-    }
-    exportData = allSamples.slice(startIdx);
-  }
-
-  const mode = document.querySelector('input[name="mode"]:checked').value;
-  const measureHeader = (mode === 'speed') ? 'omega' : 'angulo';
-
-  // Cabecalho no formato: tempo_ms;ref;grandeza;u
-  let csvContent = `tempo_ms;ref;${measureHeader};u\r\n`;
-
-  for (const s of exportData) {
-    csvContent += `${s.t_ms};${s.ref.toFixed(4)};${s.medida.toFixed(4)};${s.u}\r\n`;
-  }
-
-  // Download do arquivo
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  const now = new Date();
-  const dateStr = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const suffix = (rangeOption === 'visible') ? 'intervalo_visivel' : 'serie_completa';
-  link.setAttribute('href', url);
-  link.setAttribute('download', `dados_controle_${suffix}_${dateStr}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-// Inicializa aplicacao
-window.addEventListener('DOMContentLoaded', () => {
-  initChart();
-  onModeChange();
-});
-</script>
 </body>
 </html>
