@@ -1,5 +1,5 @@
 /* ============================================================
-   header.css — barra superior fixa com status serial e ações
+   header.css — barra superior com status serial e ações
    ============================================================ */
 
 #app-header {
@@ -8,7 +8,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 22px;
   background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
   gap: 20px;
@@ -24,8 +24,8 @@
 }
 
 .header-logo img {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   display: block;
 }
 
@@ -37,7 +37,7 @@
   white-space: nowrap;
 }
 
-/* ---- Bloco de status serial (centro) ---- */
+/* ---- Status serial (centro) ---- */
 .header-serial {
   display: flex;
   align-items: center;
@@ -46,21 +46,22 @@
   justify-content: center;
 }
 
+/* Badge de estado */
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
+  gap: 7px;
+  padding: 5px 12px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  transition: background var(--transition), color var(--transition), border-color var(--transition);
   border: 1px solid transparent;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+  white-space: nowrap;
 }
 
-/* Indicador circular de estado */
 .badge::before {
   content: '';
   width: 7px;
@@ -91,7 +92,28 @@
 }
 .badge--connected::before { background: var(--color-success); }
 
-/* Nome da porta exibido ao lado do badge */
+.badge--running {
+  background: var(--color-running-bg);
+  color: var(--color-running);
+  border-color: #90b8e8;
+}
+.badge--running::before { background: var(--color-running); }
+
+.badge--stopping {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: #e8b4b4;
+}
+.badge--stopping::before {
+  background: var(--color-danger);
+  animation: blink 0.6s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
 .port-name {
   font-size: 12px;
   color: var(--color-text-muted);

@@ -1,5 +1,5 @@
 /* ============================================================
-   charts.css — coluna direita com barra de ferramentas e gráficos (60%)
+   charts.css — coluna direita com toolbar e dois gráficos (60%)
    ============================================================ */
 
 #charts-area {
@@ -17,8 +17,8 @@
   justify-content: space-between;
   gap: 12px;
   flex-shrink: 0;
-  height: 44px;
-  padding: 0 16px;
+  height: 46px;
+  padding: 0 18px;
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
 }
@@ -31,17 +31,16 @@
 
 .toolbar-sep {
   width: 1px;
-  height: 20px;
+  height: 22px;
   background: var(--color-border);
   flex-shrink: 0;
 }
 
-/* Select de janela de tempo */
 .toolbar-select {
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
-  padding: 4px 8px;
+  padding: 5px 8px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-bg);
@@ -52,21 +51,21 @@
 }
 .toolbar-select:focus { border-color: var(--color-primary); }
 
-/* Label compacto no toolbar */
 .toolbar-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-muted);
+  font-weight: 500;
   white-space: nowrap;
 }
 
-/* Radio buttons compactos no toolbar */
 .toolbar-radio {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text);
   cursor: pointer;
+  font-weight: 500;
 }
 .toolbar-radio input[type="radio"] {
   accent-color: var(--color-primary);
@@ -81,29 +80,17 @@
   overflow: hidden;
 }
 
-/* Divisor entre os dois gráficos */
-.chart-divider {
-  height: 1px;
-  background: var(--color-border);
-  flex-shrink: 0;
-}
-
-/* Rótulo do gráfico (aparece no canto superior esquerdo, sobre o canvas) */
+/* Rótulo flutuante no canto superior esquerdo do gráfico */
 .chart-label {
   position: absolute;
   top: 8px;
-  left: 12px;
+  left: 14px;
   font-size: 11px;
   font-weight: 700;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   pointer-events: none;
   z-index: 1;
   user-select: none;
-}
-
-/* Garante que o canvas do Chart.js preencha o contêiner */
-.chart-container canvas {
-  display: block;
 }
