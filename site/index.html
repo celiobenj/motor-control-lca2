@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Controle de Motor - ESP32</title>
+  <title>LCA2 - Controle de Motor</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
 
   <!-- KaTeX -->
@@ -22,19 +22,16 @@
      =================================================================== -->
 <header id="app-header">
 
-  <!-- Logo e título -->
   <div class="header-logo">
-    <img src="favicon.svg" alt="Logo controle de motor">
-    <span class="header-title">Controle de Motor &mdash; ESP32</span>
+    <img src="favicon.svg" alt="Logo">
+    <span class="header-title">LCA2 - Controle de Motor</span>
   </div>
 
-  <!-- Status da conexão serial -->
   <div class="header-serial">
     <span id="serial-badge" class="badge badge--disconnected" data-state="disconnected">Desconectado</span>
     <span id="serial-port-name" class="port-name"></span>
 
     <button id="btn-connect" class="btn btn--ghost" type="button" title="Conectar porta serial">
-      <!-- Ícone USB / plug -->
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path d="M8 2V9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
         <path d="M5.5 6.5L8 9.5L10.5 6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
@@ -44,7 +41,6 @@
     </button>
 
     <button id="btn-disconnect" class="btn btn--ghost" type="button" title="Desconectar" hidden>
-      <!-- Ícone X -->
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
@@ -52,10 +48,8 @@
     </button>
   </div>
 
-  <!-- Botões de ação -->
   <div class="header-actions">
     <button id="btn-apply" class="btn btn--primary" type="button" disabled title="Enviar configuração para a ESP32">
-      <!-- Ícone enviar (seta) -->
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path d="M2 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
@@ -63,7 +57,6 @@
     </button>
 
     <button id="btn-stop" class="btn btn--danger" type="button" disabled title="Parar motor imediatamente">
-      <!-- Ícone parar (quadrado) -->
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/>
       </svg>
@@ -73,26 +66,39 @@
 </header>
 
 <!-- ===================================================================
-     CONTEÚDO PRINCIPAL: CONFIGURAÇÃO (40%) + GRÁFICOS (60%)
+     CONTEÚDO PRINCIPAL: CONFIGURAÇÃO | HANDLE | GRÁFICOS
      =================================================================== -->
 <div id="app-content">
 
   <!-- ---------------------------------------------------------------
-       PAINEL DE CONFIGURAÇÃO (esquerda)
+       PAINEL DE CONFIGURAÇÃO (esquerda — 40%)
        --------------------------------------------------------------- -->
   <aside id="config-panel">
 
     <!-- Aviso de incompatibilidade de navegador -->
     <div id="compat-warning" class="config-group" hidden>
-      <p class="input-label" style="width:auto;color:#B78103;">
+      <p style="font-size:13px;color:#B78103;line-height:1.5;">
         Este navegador não suporta a Web Serial API.<br>
         Utilize Google Chrome, Microsoft Edge ou Opera.
       </p>
     </div>
 
-    <!-- Modo de controle -->
+    <!-- ---- MODO DE CONTROLE ---- -->
     <div class="config-group">
-      <span class="group-label">Modo</span>
+      <div class="group-header">
+        <span class="group-label">Modo de Controle</span>
+        <div class="group-actions">
+          <!-- Ajuda do modo -->
+          <button class="btn-group-action" id="btn-help-mode" type="button" title="Ajuda sobre o modo de controle">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6.2 6.3a1.9 1.9 0 1 1 1.8 2.4V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <circle cx="8" cy="12" r="0.75" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <div class="radio-group">
         <label class="radio-label">
           <input type="radio" name="mode" value="speed" checked>
@@ -105,15 +111,35 @@
       </div>
     </div>
 
-    <!-- Referência cíclica -->
+    <!-- ---- REFERÊNCIA ---- -->
     <div class="config-group">
-      <span class="group-label">Referência</span>
+      <div class="group-header">
+        <span class="group-label">Referência</span>
+        <div class="group-actions">
+          <!-- Resetar referência -->
+          <button class="btn-group-action" id="btn-reset-ref" type="button" title="Restaurar valores padrão">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M8 1v4l3-2z" fill="currentColor"/>
+            </svg>
+          </button>
+          <!-- Ajuda -->
+          <button class="btn-group-action" id="btn-help-ref" type="button" title="Ajuda sobre a referência">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6.2 6.3a1.9 1.9 0 1 1 1.8 2.4V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <circle cx="8" cy="12" r="0.75" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </div>
 
       <div class="input-row">
         <span class="input-label">Níveis</span>
         <div class="input-wrap">
           <input type="text" id="ref-levels" class="input-mono"
-                 placeholder="5, 12, 6, 2"
+                 value="5, 12, 6, 2"
+                 placeholder="Ex: 5, 12, 6, 2"
                  spellcheck="false" autocomplete="off">
           <span class="input-unit" id="ref-unit">rad/s</span>
         </div>
@@ -129,25 +155,46 @@
       </div>
     </div>
 
-    <!-- Equação de diferenças -->
+    <!-- ---- EQUAÇÃO DE DIFERENÇAS ---- -->
     <div class="config-group">
-      <span class="group-label">Equação de Diferenças</span>
+      <div class="group-header">
+        <span class="group-label">Equação de Diferenças</span>
+        <div class="group-actions">
+          <!-- Resetar equação -->
+          <button class="btn-group-action" id="btn-reset-eq" type="button" title="Restaurar coeficientes padrão">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M8 1v4l3-2z" fill="currentColor"/>
+            </svg>
+          </button>
+          <!-- Ajuda -->
+          <button class="btn-group-action" id="btn-help-eq" type="button" title="Ajuda sobre a equação de diferenças">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6.2 6.3a1.9 1.9 0 1 1 1.8 2.4V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <circle cx="8" cy="12" r="0.75" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </div>
 
       <div class="input-row">
         <span class="input-label">e[ ]</span>
         <input type="text" id="vec-e" class="input-mono"
-               placeholder="7.98, -6.781"
+               value="1"
+               placeholder="Ex: 1"
                spellcheck="false" autocomplete="off">
       </div>
 
       <div class="input-row">
         <span class="input-label">u[ ]</span>
         <input type="text" id="vec-u" class="input-mono"
-               placeholder="0.999"
+               value="1"
+               placeholder="Ex: 1"
                spellcheck="false" autocomplete="off">
       </div>
 
-      <!-- Preview KaTeX centralizado -->
+      <!-- Preview KaTeX -->
       <div id="katex-display" class="katex-container">
         <span class="katex-placeholder">Insira os coeficientes</span>
       </div>
@@ -155,12 +202,15 @@
 
   </aside>
 
+  <!-- Handle vertical: arrastar para redimensionar config vs. gráficos -->
+  <div id="resize-h" class="resize-handle resize-handle--v" title="Arrastar para redimensionar"></div>
+
   <!-- ---------------------------------------------------------------
-       ÁREA DE GRÁFICOS (direita)
+       ÁREA DE GRÁFICOS (direita — 60%)
        --------------------------------------------------------------- -->
   <main id="charts-area">
 
-    <!-- Barra de ferramentas dos gráficos -->
+    <!-- Barra de ferramentas -->
     <div id="chart-toolbar">
 
       <!-- Janela de tempo -->
@@ -169,17 +219,16 @@
         <select id="time-window" class="toolbar-select">
           <option value="0">Tudo</option>
           <option value="5">5 s</option>
-          <option value="15">15 s</option>
-          <option value="30" selected>30 s</option>
+          <option value="15" selected>15 s</option>
+          <option value="30">30 s</option>
           <option value="60">1 min</option>
         </select>
       </div>
 
       <div class="toolbar-sep"></div>
 
-      <!-- Controles de visualização -->
+      <!-- Pausar / Limpar -->
       <div class="toolbar-group">
-        <!-- Pausar / Retomar -->
         <button id="btn-pause" class="btn btn--icon btn--ghost" type="button" title="Pausar gráfico">
           <span id="icon-pause">
             <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -194,7 +243,6 @@
           </span>
         </button>
 
-        <!-- Limpar dados -->
         <button id="btn-clear" class="btn btn--icon btn--ghost" type="button" title="Limpar dados acumulados">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M2 4H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -207,8 +255,9 @@
 
       <div class="toolbar-sep"></div>
 
-      <!-- Exportação CSV -->
+      <!-- Exportar CSV -->
       <div class="toolbar-group">
+        <span class="toolbar-label">Exportar</span>
         <label class="toolbar-radio">
           <input type="radio" id="csv-all" name="csv-range" value="all" checked>
           Tudo
@@ -217,8 +266,6 @@
           <input type="radio" id="csv-visible" name="csv-range" value="visible">
           Visível
         </label>
-
-        <!-- Botão exportar -->
         <button id="btn-export" class="btn btn--ghost" type="button" title="Exportar CSV">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M8 2V10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
@@ -236,7 +283,8 @@
       <canvas id="chart-main"></canvas>
     </div>
 
-    <div class="chart-divider"></div>
+    <!-- Handle horizontal: arrastar para redimensionar gráfico 1 e 2 -->
+    <div id="resize-charts" class="resize-handle resize-handle--h" title="Arrastar para redimensionar"></div>
 
     <!-- Gráfico 2: Sinal de controle u -->
     <div class="chart-container" id="chart2-container">
@@ -248,20 +296,51 @@
 </div>
 
 <!-- ===================================================================
-     MODAL DE CONFIRMAÇÃO DE LIMPEZA
+     MODAIS
      =================================================================== -->
+
+<!-- Confirmação: limpar dados -->
 <div id="modal-clear" class="modal-overlay" hidden>
   <div class="modal-card">
     <p>Limpar todos os dados acumulados? Esta ação não poderá ser desfeita.</p>
     <div class="modal-actions">
-      <button id="btn-modal-cancel"  class="btn btn--ghost">Cancelar</button>
-      <button id="btn-modal-confirm" class="btn btn--danger">Limpar</button>
+      <button id="btn-modal-clear-cancel"  class="btn btn--ghost">Cancelar</button>
+      <button id="btn-modal-clear-confirm" class="btn btn--danger">Limpar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmação: restaurar padrões -->
+<div id="modal-reset" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <p id="modal-reset-text">Restaurar os valores padrão?</p>
+    <div class="modal-actions">
+      <button id="btn-modal-reset-cancel"  class="btn btn--ghost">Cancelar</button>
+      <button id="btn-modal-reset-confirm" class="btn btn--primary">Restaurar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ajuda contextual -->
+<div id="modal-help" class="modal-overlay" hidden>
+  <div class="modal-card modal-card--wide">
+    <div class="modal-help-header">
+      <h3 id="modal-help-title"></h3>
+      <button id="btn-modal-help-close" class="btn btn--icon btn--ghost" type="button" title="Fechar">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div id="modal-help-body" class="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn--primary" type="button" onclick="document.getElementById('modal-help').hidden=true">Fechar</button>
     </div>
   </div>
 </div>
 
 <!-- ===================================================================
-     SCRIPTS — CDNs antes do módulo ES para garantir disponibilidade
+     SCRIPTS
      =================================================================== -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
