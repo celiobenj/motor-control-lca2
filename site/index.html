@@ -134,23 +134,70 @@
         </div>
       </div>
 
-      <div class="input-row">
-        <span class="input-label">Níveis</span>
-        <div class="input-wrap">
-          <input type="text" id="ref-levels" class="input-mono"
-                 value="5, 12, 6, 2"
-                 placeholder="Ex: 5, 12, 6, 2"
-                 spellcheck="false" autocomplete="off">
-          <span class="input-unit" id="ref-unit">rad/s</span>
+      <!-- Segmented Control: Interna vs Externa -->
+      <div class="segmented-control">
+        <button type="button" class="segmented-btn active" id="btn-ref-internal">Interna</button>
+        <button type="button" class="segmented-btn" id="btn-ref-external">Externa</button>
+      </div>
+
+      <!-- Subgrupo: Referência Interna (Degraus) -->
+      <div id="ref-internal-group" class="ref-subgroup">
+        <div class="input-row">
+          <span class="input-label">Níveis</span>
+          <div class="input-wrap">
+            <input type="text" id="ref-levels" class="input-mono"
+                   value="5, 12, 6, 2"
+                   placeholder="Ex: 5, 12, 6, 2"
+                   spellcheck="false" autocomplete="off">
+            <span class="input-unit" id="ref-unit">rad/s</span>
+          </div>
+        </div>
+
+        <div class="input-row">
+          <span class="input-label">Intervalo</span>
+          <div class="input-wrap">
+            <input type="number" id="ref-interval" class="input-mono input-narrow"
+                   min="1" step="1" value="6">
+            <span class="input-unit">s</span>
+          </div>
         </div>
       </div>
 
-      <div class="input-row">
-        <span class="input-label">Intervalo</span>
-        <div class="input-wrap">
-          <input type="number" id="ref-interval" class="input-mono input-narrow"
-                 min="1" step="1" value="6">
-          <span class="input-unit">s</span>
+      <!-- Subgrupo: Referência Externa -->
+      <div id="ref-external-group" class="ref-subgroup" hidden>
+        <div class="input-row">
+          <span class="input-label">Mínimo</span>
+          <div class="input-wrap">
+            <input type="number" id="ref-min" class="input-mono input-narrow"
+                   step="any" value="0">
+            <span class="input-unit" id="ref-min-unit">rad/s</span>
+          </div>
+        </div>
+
+        <div class="input-row">
+          <span class="input-label">Máximo</span>
+          <div class="input-wrap">
+            <input type="number" id="ref-max" class="input-mono input-narrow"
+                   step="any" value="15">
+            <span class="input-unit" id="ref-max-unit">rad/s</span>
+          </div>
+        </div>
+
+        <!-- Gauge Semicircular SVG (180°) -->
+        <div class="pot-gauge-container">
+          <svg class="pot-gauge-svg" viewBox="0 0 140 75">
+            <path class="gauge-track" d="M 16 68 A 54 54 0 0 1 124 68" />
+            <path id="gauge-fill" class="gauge-fill" d="M 16 68 A 54 54 0 0 1 124 68"
+                  stroke-dasharray="169.65" stroke-dashoffset="169.65" />
+          </svg>
+          <div class="gauge-labels">
+            <span id="gauge-label-min">0</span>
+            <span id="gauge-label-max">15</span>
+          </div>
+          <div class="gauge-info">
+            <div class="gauge-value" id="gauge-value">0.0 rad/s</div>
+            <div class="pot-pct-badge" id="pot-pct">Potenciômetro: 0%</div>
+          </div>
         </div>
       </div>
     </div>
