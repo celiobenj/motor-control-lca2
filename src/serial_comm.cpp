@@ -48,6 +48,11 @@ static void _process_json_line(const char* jsonStr) {
     const char* modeStr = doc["mode"] | "speed";
     msg.params.mode = (strcmp(modeStr, "position") == 0) ? MODE_POSITION : MODE_SPEED;
 
+    const char* refTypeStr = doc["ref_type"] | "internal";
+    msg.params.refType = (strcmp(refTypeStr, "external") == 0) ? REF_EXTERNAL : REF_INTERNAL;
+    msg.params.refMin  = doc["ref_min"] | 0.0f;
+    msg.params.refMax  = doc["ref_max"] | 15.0f;
+
     msg.params.order = constrain((int)(doc["order"] | 1), 1, MAX_ORDER);
 
     JsonArray arrE = doc["coeff_e"].as<JsonArray>();
@@ -64,7 +69,7 @@ static void _process_json_line(const char* jsonStr) {
         msg.params.levels[msg.params.levelCount++] = v.as<float>();
     }
 
-    if (msg.params.levelCount == 0) {
+    if (msg.params.refType == REF_INTERNAL && msg.params.levelCount == 0) {
         Serial.println("{\"status\":\"error\",\"msg\":\"sem_niveis_referencia\"}");
         return;
     }
@@ -114,19 +119,29 @@ void serial_comm_task(void* pvParameters) {
         // --- 2. Envio de amostras de telemetria da fila de plot ---
         PlotSample sample;
         while (xQueueReceive(_qPlot, &sample, 0) == pdPASS) {
-            Serial.print(">ref:");
-            Serial.println(sample.ref);
-
-            if (sample.mode == MODE_SPEED) {
-                Serial.print(">omega:");
-                Serial.println(sample.medida);
+            if (sample.isIdleSample) {
+                // Em repouso: envia apenas a telemetria do potenciometro
+                Serial.print(">pot:");
+                Serial.println(sample.potNorm, 4);
             } else {
-                Serial.print(">angulo:");
-                Serial.println(sample.medida);
-            }
+                // Em operacao: telemetria completa de controle
+                Serial.print(">ref:");
+                Serial.println(sample.ref);
 
-            Serial.print(">u:");
-            Serial.println(sample.pwm);
+                if (sample.mode == MODE_SPEED) {
+                    Serial.print(">omega:");
+                    Serial.println(sample.medida);
+                } else {
+                    Serial.print(">angulo:");
+                    Serial.println(sample.medida);
+                }
+
+                Serial.print(">u:");
+                Serial.println(sample.pwm);
+
+                Serial.print(">pot:");
+                Serial.println(sample.potNorm, 4);
+            }
         }
 
         // Cede tempo da CPU para outras atividades e watchdog do Nucleo 0
