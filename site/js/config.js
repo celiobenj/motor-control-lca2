@@ -2,210 +2,263 @@
 // config.js — painel de configuração, validação e KaTeX
 // ============================================================
 
-/** Parseia string de vetor "1.0, -2.5, 3" em float[]. Retorna null se inválido. */
+// ---- Padrões por modo -----------------------------------------------
+
+const _DEFAULTS = {
+  speed: {
+    refLevels:   '5, 12, 6, 2',
+    refInterval: '6',
+    vecE:        '1',
+    vecU:        '1',
+  },
+  position: {
+    refLevels:   '30, 90, 150, 100',
+    refInterval: '6',
+    vecE:        '6.9, -6.8',
+    vecU:        '1',
+  },
+};
+
+const UNIT_LABELS = { speed: 'rad/s', position: 'graus' };
+
+// ---- Conteúdo dos modais de ajuda -----------------------------------
+
+export const HELP_CONTENT = {
+  mode: {
+    title: 'Modo de Controle',
+    html: `
+      <p><strong>Velocidade:</strong> Controla a velocidade angular do eixo do motor.
+      A referência e a medição são expressas em <strong>rad/s</strong>.
+      O sinal de controle u é restrito ao intervalo [0, 255] (PWM unidirecional — motor gira apenas em um sentido).</p>
+      <p><strong>Posição:</strong> Controla o ângulo do eixo do motor.
+      A referência e a medição são expressas em <strong>graus</strong>.
+      O sinal de controle u pode variar entre [−255, 255] (PWM bidirecional — motor pode girar nos dois sentidos).</p>
+    `,
+  },
+  ref: {
+    title: 'Referência',
+    html: `
+      <p><strong>Níveis:</strong> Lista de valores de referência separados por vírgula.
+      O sistema percorre os valores em sequência e reinicia após o último.
+      Exemplo: <code>5, 12, 6, 2</code></p>
+      <p><strong>Intervalo:</strong> Duração em segundos inteiros de cada nível. Mínimo: 1 segundo.</p>
+      <hr>
+      <p><strong>Padrão Velocidade:</strong> <code>5, 12, 6, 2</code> — intervalo de <code>6</code> s</p>
+      <p><strong>Padrão Posição:</strong> <code>30, 90, 150, 100</code> — intervalo de <code>6</code> s</p>
+    `,
+  },
+  eq: {
+    title: 'Equação de Diferenças',
+    html: `
+      <p>O controlador é definido como:</p>
+      <p><code>u[k] = c_e0·e[k] + c_e1·e[k−1] + ... + c_u1·u[k−1] + ...</code></p>
+      <p><strong>e[ ]:</strong> Coeficientes de erro. O primeiro coeficiente multiplica <code>e[k]</code>, o segundo <code>e[k−1]</code>, e assim por diante.</p>
+      <p><strong>u[ ]:</strong> Coeficientes de saída passada. O primeiro multiplica <code>u[k−1]</code>, o segundo <code>u[k−2]</code>, etc. Pode ser deixado vazio.</p>
+      <p>A ordem do controlador é determinada pelo vetor de maior comprimento. Coeficientes ausentes valem 0.</p>
+      <hr>
+      <p><strong>Padrão Velocidade:</strong> <code>u[k] = 1·e[k] + 1·u[k−1]</code> (<code>e[] = 1</code> &nbsp; <code>u[] = 1</code>)</p>
+      <p><strong>Padrão Posição:</strong> <code>u[k] = 6.9·e[k] − 6.8·e[k−1] + 1·u[k−1]</code> (<code>e[] = 6.9, -6.8</code> &nbsp; <code>u[] = 1</code>)</p>
+    `,
+  },
+};
+
+// ---- Helpers de validação -------------------------------------------
+
+/** Parseia string "1.0, -2.5, 3" em float[]. Retorna null se inválido. */
 function parseVec(str) {
   const s = str.trim();
   if (!s) return [];
-  const parts = s.split(',');
-  const nums = [];
-  for (const p of parts) {
+  return s.split(',').reduce((acc, p) => {
+    if (acc === null) return null;
     const v = parseFloat(p.trim());
-    if (isNaN(v) || p.trim() === '') return null; // inválido
-    nums.push(v);
-  }
-  return nums;
+    return (isNaN(v) || p.trim() === '') ? null : [...acc, v];
+  }, []);
 }
 
-/** Formata número float removendo zeros desnecessários (até 6 dígitos). */
+/** Formata float com até 6 dígitos significativos. */
 function fmtNum(v) {
   return parseFloat(v.toPrecision(6)).toString();
 }
 
-/** Gera string LaTeX da equação de diferenças a partir dos vetores. */
+/** Gera string LaTeX da equação de diferenças. */
 function buildLatex(eArr, uArr) {
   const terms = [];
-
   for (let i = 0; i < eArr.length; i++) {
     if (eArr[i] === 0) continue;
-    const sub = i === 0 ? 'k' : `k-${i}`;
-    terms.push({ coef: eArr[i], label: `e[${sub}]` });
+    terms.push({ coef: eArr[i], label: i === 0 ? 'e[k]' : `e[k-${i}]` });
   }
   for (let i = 0; i < uArr.length; i++) {
     if (uArr[i] === 0) continue;
     terms.push({ coef: uArr[i], label: `u[k-${i + 1}]` });
   }
-
   if (terms.length === 0) return 'u[k] = 0';
 
-  let latex = 'u[k] = ';
-  terms.forEach(({ coef, label }, idx) => {
-    const absStr = fmtNum(Math.abs(coef));
-    if (idx === 0) {
-      latex += `${fmtNum(coef)} \\cdot ${label}`;
-    } else {
-      latex += coef >= 0
-        ? ` + ${absStr} \\cdot ${label}`
-        : ` - ${absStr} \\cdot ${label}`;
-    }
-  });
-  return latex;
+  return 'u[k] = ' + terms.map(({ coef, label }, idx) => {
+    const a = fmtNum(Math.abs(coef));
+    if (idx === 0) return `${fmtNum(coef)} \\cdot ${label}`;
+    return coef >= 0 ? ` + ${a} \\cdot ${label}` : ` - ${a} \\cdot ${label}`;
+  }).join('');
 }
 
-// Padrões padrão de referência por modo
-const DEFAULT_LEVELS = { speed: '5, 12, 6, 2', position: '30, 90, 150, 100' };
-const UNIT_LABELS    = { speed: 'rad/s',        position: 'graus' };
+// ---- Classe principal -----------------------------------------------
 
 export class ConfigPanel {
   /**
-   * @param {object} elements — refs de elementos do DOM
-   * @param {function} onValidChange — callback(isValid: boolean)
+   * @param {object}   elements       refs de elementos DOM
+   * @param {function} onValidChange  callback(isValid: boolean)
    */
   constructor(elements, onValidChange) {
     this._els = elements;
     this._onValidChange = onValidChange;
-    this._levelsEdited = false;
 
+    // Estado salvo por modo (inicia com defaults de referência e equações pré-preenchidos)
+    this._modeState = {
+      speed:    { ..._DEFAULTS.speed },
+      position: { ..._DEFAULTS.position },
+    };
+
+    this._currentMode = 'speed';
     this._bind();
-    this._validate(); // estado inicial
   }
 
-  // ---- Getters de estado ------------------------------------------------
+  // ---- API pública ----------------------------------------------------
 
-  /** Retorna o modo selecionado ('speed' | 'position'). */
   get mode() {
     return document.querySelector('input[name="mode"]:checked')?.value ?? 'speed';
   }
 
-  /** @returns {boolean} todos os campos estão válidos */
   get isValid() {
     const e = parseVec(this._els.vecE.value);
     const u = parseVec(this._els.vecU.value);
     const l = parseVec(this._els.refLevels.value);
     const iv = parseInt(this._els.refInterval.value, 10);
-
-    const eOk = e !== null;
-    const uOk = u !== null;
-    const atLeastOne = (e?.length ?? 0) > 0 || (u?.length ?? 0) > 0;
-    const levelsOk = l !== null && l.length > 0;
-    const intervalOk = !isNaN(iv) && iv >= 1;
-
-    return eOk && uOk && atLeastOne && levelsOk && intervalOk;
+    return (
+      e !== null &&
+      u !== null &&
+      ((e?.length ?? 0) > 0 || (u?.length ?? 0) > 0) &&
+      l !== null && l.length > 0 &&
+      !isNaN(iv) && iv >= 1
+    );
   }
 
-  /**
-   * Constrói e retorna o payload JSON para envio à ESP32.
-   * @returns {object|null}
-   */
+  /** Retorna payload JSON pronto para envio à ESP32. */
   getPayload() {
     if (!this.isValid) return null;
-
     const eArr = parseVec(this._els.vecE.value) ?? [];
     const uArr = parseVec(this._els.vecU.value) ?? [];
     const order = Math.max(eArr.length, uArr.length);
-    const levels = parseVec(this._els.refLevels.value);
-    const interval_s = parseInt(this._els.refInterval.value, 10);
-
     return {
-      mode:     this.mode,
+      mode:       this.mode,
       order,
-      coeff_e:  Array.from({ length: order }, (_, i) => eArr[i] ?? 0),
-      coeff_u:  Array.from({ length: order }, (_, i) => uArr[i] ?? 0),
-      levels,
-      interval_s,
+      coeff_e:    Array.from({ length: order }, (_, i) => eArr[i] ?? 0),
+      coeff_u:    Array.from({ length: order }, (_, i) => uArr[i] ?? 0),
+      levels:     parseVec(this._els.refLevels.value),
+      interval_s: parseInt(this._els.refInterval.value, 10),
     };
   }
 
-  // ---- Métodos internos -------------------------------------------------
+  /**
+   * Restaura os valores padrão de um grupo específico para o modo atual.
+   * @param {'ref'|'eq'} group
+   */
+  resetGroup(group) {
+    const mode = this.mode;
+    const def  = _DEFAULTS[mode];
+    if (group === 'ref') {
+      this._els.refLevels.value   = def.refLevels;
+      this._els.refInterval.value = def.refInterval;
+      this._modeState[mode].refLevels   = def.refLevels;
+      this._modeState[mode].refInterval = def.refInterval;
+    } else if (group === 'eq') {
+      this._els.vecE.value = def.vecE;
+      this._els.vecU.value = def.vecU;
+      this._modeState[mode].vecE = def.vecE;
+      this._modeState[mode].vecU = def.vecU;
+    }
+    this._validate();
+  }
+
+  /** Inicializa o painel com os valores do estado inicial. */
+  init() {
+    this._applyState(this._modeState[this._currentMode]);
+    this._validate();
+  }
+
+  // ---- Métodos internos -----------------------------------------------
 
   _bind() {
     const { vecE, vecU, refLevels, refInterval } = this._els;
-
-    vecE.addEventListener('input',         () => this._validate());
-    vecU.addEventListener('input',         () => this._validate());
-    refLevels.addEventListener('input',    () => { this._levelsEdited = true; this._validate(); });
-    refInterval.addEventListener('input',  () => this._validate());
-
-    document.querySelectorAll('input[name="mode"]').forEach(radio => {
-      radio.addEventListener('change', () => this._onModeChange());
+    [vecE, vecU, refLevels, refInterval].forEach(el => {
+      el.addEventListener('input', () => this._validate());
+    });
+    document.querySelectorAll('input[name="mode"]').forEach(r => {
+      r.addEventListener('change', () => this._onModeChange());
     });
   }
 
   _onModeChange() {
-    const mode = this.mode;
-    this._els.refUnit.textContent = UNIT_LABELS[mode];
-    if (!this._levelsEdited) {
-      this._els.refLevels.value = DEFAULT_LEVELS[mode];
-    }
+    const newMode = this.mode;
+    // Salva estado atual antes de trocar
+    this._modeState[this._currentMode] = this._captureInputs();
+    // Carrega estado do novo modo
+    this._applyState(this._modeState[newMode]);
+    this._currentMode = newMode;
     this._validate();
   }
 
-  /** Valida todos os campos, atualiza classes CSS e renderiza a equação. */
+  _captureInputs() {
+    return {
+      refLevels:   this._els.refLevels.value,
+      refInterval: this._els.refInterval.value,
+      vecE:        this._els.vecE.value,
+      vecU:        this._els.vecU.value,
+    };
+  }
+
+  _applyState(state) {
+    this._els.refLevels.value   = state.refLevels;
+    this._els.refInterval.value = state.refInterval;
+    this._els.vecE.value        = state.vecE;
+    this._els.vecU.value        = state.vecU;
+    this._els.refUnit.textContent = UNIT_LABELS[this.mode];
+  }
+
   _validate() {
-    const { vecE, vecU, refLevels, refInterval } = this._els;
+    const eArr = parseVec(this._els.vecE.value);
+    const uArr = parseVec(this._els.vecU.value);
+    const lArr = parseVec(this._els.refLevels.value);
+    const iv   = parseInt(this._els.refInterval.value, 10);
 
-    const eStr = vecE.value;
-    const uStr = vecU.value;
-    const lStr = refLevels.value;
-    const iv   = parseInt(refInterval.value, 10);
+    const eEmpty = this._els.vecE.value.trim() === '';
 
-    const eArr = parseVec(eStr);
-    const uArr = parseVec(uStr);
-    const lArr = parseVec(lStr);
+    this._setErr(this._els.vecE,       eArr === null || eEmpty);
+    this._setErr(this._els.vecU,       uArr === null);
+    this._setErr(this._els.refLevels,  lArr === null || lArr.length === 0);
+    this._setErr(this._els.refInterval, isNaN(iv) || iv < 1);
 
-    // Marcar campos inválidos
-    this._setFieldError(vecE,       eArr === null || eStr.trim() === '');
-    this._setFieldError(vecU,       uArr === null);
-    this._setFieldError(refLevels,  lArr === null || lArr.length === 0 || lStr.trim() === '');
-    this._setFieldError(refInterval, isNaN(iv) || iv < 1);
-
-    // Atualiza KaTeX
-    this._renderEquation(eArr, uArr);
-
-    // Notifica orquestrador
+    this._renderKatex(eArr, uArr);
     this._onValidChange(this.isValid);
   }
 
-  _setFieldError(el, isError) {
-    el.classList.toggle('is-invalid', isError);
-  }
+  _setErr(el, isErr) { el.classList.toggle('is-invalid', isErr); }
 
-  _renderEquation(eArr, uArr) {
+  _renderKatex(eArr, uArr) {
     const container = this._els.katexDisplay;
-
     if (eArr === null || uArr === null) {
       container.innerHTML = '<span class="katex-placeholder">Coeficientes inválidos</span>';
       return;
     }
-
-    const eVec = eArr ?? [];
-    const uVec = uArr ?? [];
-
-    if (eVec.length === 0 && uVec.length === 0) {
+    if (eArr.length === 0 && uArr.length === 0) {
       container.innerHTML = '<span class="katex-placeholder">Insira os coeficientes</span>';
       return;
     }
-
-    const latex = buildLatex(eVec, uVec);
-
+    const latex = buildLatex(eArr, uArr);
     if (window.katex) {
       try {
-        window.katex.render(latex, container, {
-          displayMode: true,
-          throwOnError: false,
-        });
-      } catch (_) {
-        container.textContent = latex;
-      }
-    } else {
-      // KaTeX ainda não carregou
-      container.textContent = latex;
+        window.katex.render(latex, container, { displayMode: true, throwOnError: false });
+        return;
+      } catch (_) {}
     }
-  }
-
-  /** Inicializa valores padrão ao carregar. */
-  init() {
-    this._els.refUnit.textContent = UNIT_LABELS[this.mode];
-    this._els.refLevels.value = DEFAULT_LEVELS[this.mode];
-    this._validate();
+    container.textContent = latex;
   }
 }

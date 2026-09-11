@@ -34,7 +34,7 @@ export function exportCsv(samples, mode) {
 
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `dados_controle_${suffix}_${dateStr}.csv`);
+  link.setAttribute('download', `dados-controle-${suffix}-${dateStr}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
