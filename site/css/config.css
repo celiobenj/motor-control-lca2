@@ -17,8 +17,8 @@
   border-bottom: 1px solid var(--color-border);
 }
 
-.config-group:first-child { padding-top: 6px; }
-.config-group:last-child  { border-bottom: none; flex: 1; }
+.config-group:first-child   { padding-top: 6px; }
+.config-group:last-of-type  { border-bottom: none; }
 
 /* ---- Cabeçalho do grupo: label + botões ---- */
 .group-header {
@@ -287,4 +287,60 @@
   font-family: var(--font-mono);
   margin-top: 2px;
 }
+
+/* ---- Rodapé minimalista do painel ---- */
+.config-footer {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #777777;
+}
+
+.footer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.footer-github-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  color: #666666;
+}
+
+.footer-sep {
+  color: #AAAAAA;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.footer-link {
+  color: #666666;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color var(--transition);
+}
+
+.footer-link:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.footer-version {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #777777;
+}
+
+.footer-placeholder {
+  color: #AAAAAA;
+}
+
 

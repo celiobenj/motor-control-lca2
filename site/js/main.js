@@ -6,6 +6,7 @@ import { SerialManager }           from './serial.js';
 import { ConfigPanel, HELP_CONTENT } from './config.js';
 import { ChartManager }            from './charts.js';
 import { exportCsv }               from './export.js';
+import { initVersionFooter }        from './version.js';
 
 // ---- Referências DOM -----------------------------------------------
 
@@ -132,6 +133,7 @@ function init() {
   _initResizeH();
   _initResizeCharts();
   _applyConnState('disconnected');
+  initVersionFooter();
 }
 
 // ---- Ligação de eventos --------------------------------------------
