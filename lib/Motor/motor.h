@@ -6,7 +6,7 @@
 class Motor
 {
 private:
-    const int freq = 20000;
+    const int freq = 5000;
     const int pwmChannel = 2;
     const int resolution = 8;
 
