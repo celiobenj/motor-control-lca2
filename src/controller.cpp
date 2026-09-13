@@ -130,15 +130,19 @@ void controller_task(void* pvParameters) {
 
                 // Saturacao do sinal de controle
                 int pwm_out = 0;
+                float u_hist_val = u_now;
+                
                 if (_params.mode == MODE_SPEED) {
                     u_now   = constrain(u_now, 0.0f, 255.0f);
                     pwm_out = (int)u_now;
+                    u_hist_val = u_now; // Speed control antigo saturava o historico
                 } else {
-                    u_now   = constrain(u_now, -255.0f, 255.0f);
-                    pwm_out = (int)u_now;
+                    float u_sat = constrain(u_now, -255.0f, 255.0f);
+                    pwm_out = (int)u_sat;
+                    u_hist_val = u_now; // Position control antigo NÃO saturava o historico (Windup bug)
                 }
 
-                _u_hist[0] = u_now;
+                _u_hist[0] = u_hist_val;
                 _motor->setSpeed(pwm_out);
 
                 // Enfileira amostra para telemetria sem bloquear
