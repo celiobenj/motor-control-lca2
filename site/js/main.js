@@ -19,12 +19,25 @@ const els = {
   btnStop:        document.getElementById('btn-stop'),
 
   // Config panel
-  vecE:           document.getElementById('vec-e'),
-  vecU:           document.getElementById('vec-u'),
-  refLevels:      document.getElementById('ref-levels'),
-  refInterval:    document.getElementById('ref-interval'),
-  refUnit:        document.getElementById('ref-unit'),
-  katexDisplay:   document.getElementById('katex-display'),
+  vecE:             document.getElementById('vec-e'),
+  vecU:             document.getElementById('vec-u'),
+  refLevels:        document.getElementById('ref-levels'),
+  refInterval:      document.getElementById('ref-interval'),
+  refUnit:          document.getElementById('ref-unit'),
+  katexDisplay:     document.getElementById('katex-display'),
+  btnRefInternal:   document.getElementById('btn-ref-internal'),
+  btnRefExternal:   document.getElementById('btn-ref-external'),
+  refInternalGroup: document.getElementById('ref-internal-group'),
+  refExternalGroup: document.getElementById('ref-external-group'),
+  refMin:           document.getElementById('ref-min'),
+  refMax:           document.getElementById('ref-max'),
+  refMinUnit:       document.getElementById('ref-min-unit'),
+  refMaxUnit:       document.getElementById('ref-max-unit'),
+  gaugeFill:        document.getElementById('gauge-fill'),
+  gaugeValue:       document.getElementById('gauge-value'),
+  gaugeLabelMin:    document.getElementById('gauge-label-min'),
+  gaugeLabelMax:    document.getElementById('gauge-label-max'),
+  potPct:           document.getElementById('pot-pct'),
 
   // Charts
   canvasMain:     document.getElementById('chart-main'),
@@ -70,8 +83,27 @@ const els = {
 const serial = new SerialManager();
 const charts = new ChartManager();
 const config = new ConfigPanel(
-  { vecE: els.vecE, vecU: els.vecU, refLevels: els.refLevels,
-    refInterval: els.refInterval, refUnit: els.refUnit, katexDisplay: els.katexDisplay },
+  {
+    vecE:             els.vecE,
+    vecU:             els.vecU,
+    refLevels:        els.refLevels,
+    refInterval:      els.refInterval,
+    refUnit:          els.refUnit,
+    katexDisplay:     els.katexDisplay,
+    btnRefInternal:   els.btnRefInternal,
+    btnRefExternal:   els.btnRefExternal,
+    refInternalGroup: els.refInternalGroup,
+    refExternalGroup: els.refExternalGroup,
+    refMin:           els.refMin,
+    refMax:           els.refMax,
+    refMinUnit:       els.refMinUnit,
+    refMaxUnit:       els.refMaxUnit,
+    gaugeFill:        els.gaugeFill,
+    gaugeValue:       els.gaugeValue,
+    gaugeLabelMin:    els.gaugeLabelMin,
+    gaugeLabelMax:    els.gaugeLabelMax,
+    potPct:           els.potPct,
+  },
   (isValid) => _updateApplyBtn(isValid)
 );
 
@@ -229,7 +261,7 @@ function _openHelp(group) {
 
 function _openReset(group) {
   _pendingResetGroup = group;
-  const labels = { ref: 'referência cíclica', eq: 'equação de diferenças' };
+  const labels = { ref: 'referência', eq: 'equação de diferenças' };
   document.getElementById('modal-reset-text').textContent =
     `Restaurar os valores padrão da ${labels[group]} para o modo atual?`;
   els.modalReset.hidden = false;
@@ -255,9 +287,18 @@ function _onSerialLine(line) {
     const val  = parseFloat(line.substring(colon + 1));
     if (isNaN(val)) return;
 
-    if      (name === 'ref')              _cycleBuf.ref    = val;
-    else if (name === 'omega' || name === 'angulo') _cycleBuf.medida = val;
-    else if (name === 'u')               _cycleBuf.u      = val;
+    if (name === 'pot') {
+      config.updateGauge(val, _cycleBuf.ref);
+    } else if (name === 'ref') {
+      _cycleBuf.ref = val;
+      if (config.refType === 'external') {
+        config.updateGauge(config._lastPotNorm, val);
+      }
+    } else if (name === 'omega' || name === 'angulo') {
+      _cycleBuf.medida = val;
+    } else if (name === 'u') {
+      _cycleBuf.u = val;
+    }
 
     if (_cycleBuf.ref !== null && _cycleBuf.medida !== null && _cycleBuf.u !== null) {
       charts.pushSample(_cycleBuf.ref, _cycleBuf.medida, _cycleBuf.u);
