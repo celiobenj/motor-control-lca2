@@ -61,7 +61,7 @@ body {
 #app-content {
   display: grid;
   /* config | handle | charts */
-  grid-template-columns: 40% 5px 1fr;
+  grid-template-columns: 30% 5px 1fr;
   height: calc(100vh - var(--header-height));
   overflow: hidden;
 }
