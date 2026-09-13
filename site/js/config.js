@@ -1,19 +1,25 @@
 // ============================================================
-// config.js — painel de configuração, validação e KaTeX
+// config.js — painel de configuração, validação, KaTeX e Gauge
 // ============================================================
 
 // ---- Padrões por modo -----------------------------------------------
 
 const _DEFAULTS = {
   speed: {
+    refType:     'internal',
     refLevels:   '5, 12, 6, 2',
     refInterval: '6',
+    refMin:      '0',
+    refMax:      '15',
     vecE:        '1',
     vecU:        '1',
   },
   position: {
+    refType:     'internal',
     refLevels:   '30, 90, 150, 100',
     refInterval: '6',
+    refMin:      '0',
+    refMax:      '180',
     vecE:        '6.9, -6.8',
     vecU:        '1',
   },
@@ -38,13 +44,12 @@ export const HELP_CONTENT = {
   ref: {
     title: 'Referência',
     html: `
-      <p><strong>Níveis:</strong> Lista de valores de referência separados por vírgula.
-      O sistema percorre os valores em sequência e reinicia após o último.
-      Exemplo: <code>5, 12, 6, 2</code></p>
-      <p><strong>Intervalo:</strong> Duração em segundos inteiros de cada nível. Mínimo: 1 segundo.</p>
+      <p><strong>Interna:</strong> Percorre ciclicamente os níveis de referência definidos em degraus pelo intervalo de tempo estipulado.</p>
+      <p><strong>Externa:</strong> Utiliza o potenciômetro físico da planta.
+      A leitura analógica (0% a 100%) é mapeada linearmente entre os limites <strong>Mínimo</strong> e <strong>Máximo</strong> configurados.</p>
       <hr>
-      <p><strong>Padrão Velocidade:</strong> <code>5, 12, 6, 2</code> — intervalo de <code>6</code> s</p>
-      <p><strong>Padrão Posição:</strong> <code>30, 90, 150, 100</code> — intervalo de <code>6</code> s</p>
+      <p><strong>Padrão Velocidade:</strong> Níveis <code>5, 12, 6, 2</code> (6 s) | Potenciômetro: <code>0</code> a <code>15</code> rad/s</p>
+      <p><strong>Padrão Posição:</strong> Níveis <code>30, 90, 150, 100</code> (6 s) | Potenciômetro: <code>0</code> a <code>180</code> graus</p>
     `,
   },
   eq: {
@@ -56,8 +61,8 @@ export const HELP_CONTENT = {
       <p><strong>u[ ]:</strong> Coeficientes de saída passada. O primeiro multiplica <code>u[k−1]</code>, o segundo <code>u[k−2]</code>, etc. Pode ser deixado vazio.</p>
       <p>A ordem do controlador é determinada pelo vetor de maior comprimento. Coeficientes ausentes valem 0.</p>
       <hr>
-      <p><strong>Padrão Velocidade:</strong> <code>u[k] = 1·e[k] + 1·u[k−1]</code> (<code>e[] = 1</code> &nbsp; <code>u[] = 1</code>)</p>
-      <p><strong>Padrão Posição:</strong> <code>u[k] = 6.9·e[k] − 6.8·e[k−1] + 1·u[k−1]</code> (<code>e[] = 6.9, -6.8</code> &nbsp; <code>u[] = 1</code>)</p>
+      <p><strong>Padrão Velocidade:</strong> <code>e[] = 1</code> &nbsp; <code>u[] = 1</code></p>
+      <p><strong>Padrão Posição:</strong> <code>e[] = 6.9, -6.8</code> &nbsp; <code>u[] = 1</code></p>
     `,
   },
 };
@@ -111,13 +116,17 @@ export class ConfigPanel {
     this._els = elements;
     this._onValidChange = onValidChange;
 
-    // Estado salvo por modo (inicia com defaults de referência e equações pré-preenchidos)
+    // Estado salvo por modo
     this._modeState = {
       speed:    { ..._DEFAULTS.speed },
       position: { ..._DEFAULTS.position },
     };
 
     this._currentMode = 'speed';
+    this._refType     = 'internal';
+    this._lastPotNorm = 0.0;
+    this._lastRef     = null;
+
     this._bind();
   }
 
@@ -127,18 +136,30 @@ export class ConfigPanel {
     return document.querySelector('input[name="mode"]:checked')?.value ?? 'speed';
   }
 
+  get refType() {
+    return this._refType;
+  }
+
   get isValid() {
     const e = parseVec(this._els.vecE.value);
     const u = parseVec(this._els.vecU.value);
-    const l = parseVec(this._els.refLevels.value);
-    const iv = parseInt(this._els.refInterval.value, 10);
-    return (
+    const eqOk = (
       e !== null &&
       u !== null &&
-      ((e?.length ?? 0) > 0 || (u?.length ?? 0) > 0) &&
-      l !== null && l.length > 0 &&
-      !isNaN(iv) && iv >= 1
+      ((e?.length ?? 0) > 0 || (u?.length ?? 0) > 0)
     );
+
+    if (this._refType === 'external') {
+      const min = parseFloat(this._els.refMin.value);
+      const max = parseFloat(this._els.refMax.value);
+      const extOk = !isNaN(min) && !isNaN(max) && min < max;
+      return eqOk && extOk;
+    } else {
+      const l = parseVec(this._els.refLevels.value);
+      const iv = parseInt(this._els.refInterval.value, 10);
+      const intOk = l !== null && l.length > 0 && !isNaN(iv) && iv >= 1;
+      return eqOk && intOk;
+    }
   }
 
   /** Retorna payload JSON pronto para envio à ESP32. */
@@ -147,14 +168,71 @@ export class ConfigPanel {
     const eArr = parseVec(this._els.vecE.value) ?? [];
     const uArr = parseVec(this._els.vecU.value) ?? [];
     const order = Math.max(eArr.length, uArr.length);
+
+    const minVal = parseFloat(this._els.refMin.value);
+    const maxVal = parseFloat(this._els.refMax.value);
+
     return {
       mode:       this.mode,
+      ref_type:   this._refType,
+      ref_min:    isNaN(minVal) ? 0.0 : minVal,
+      ref_max:    isNaN(maxVal) ? 15.0 : maxVal,
       order,
       coeff_e:    Array.from({ length: order }, (_, i) => eArr[i] ?? 0),
       coeff_u:    Array.from({ length: order }, (_, i) => uArr[i] ?? 0),
       levels:     parseVec(this._els.refLevels.value),
       interval_s: parseInt(this._els.refInterval.value, 10),
     };
+  }
+
+  /** Alterna o tipo de referência ('internal' | 'external'). */
+  setRefType(type) {
+    this._refType = type;
+    const isInt = type === 'internal';
+
+    this._els.btnRefInternal.classList.toggle('active', isInt);
+    this._els.btnRefExternal.classList.toggle('active', !isInt);
+
+    this._els.refInternalGroup.hidden = !isInt;
+    this._els.refExternalGroup.hidden = isInt;
+
+    this._modeState[this.mode].refType = type;
+    this._updateGaugeScaleLabels();
+    this._validate();
+    this.updateGauge(this._lastPotNorm, this._lastRef);
+  }
+
+  /** Atualiza a gauge com a posição normalizada do potenciômetro e o valor nominal. */
+  updateGauge(potNorm, currentRef) {
+    this._lastPotNorm = potNorm;
+    this._lastRef     = currentRef;
+
+    const clampedPot = Math.max(0, Math.min(1, potNorm));
+    const pct = Math.round(clampedPot * 100);
+
+    // Comprimento do arco de 180° = pi * 54 = ~169.65
+    const totalArc = 169.65;
+    const offset = totalArc * (1 - clampedPot);
+
+    if (this._els.gaugeFill) {
+      this._els.gaugeFill.style.strokeDashoffset = offset.toFixed(2);
+    }
+    if (this._els.potPct) {
+      this._els.potPct.textContent = `Potenciômetro: ${pct}%`;
+    }
+
+    if (this._els.gaugeValue) {
+      const unit = UNIT_LABELS[this.mode];
+      let valStr;
+      if (currentRef !== undefined && currentRef !== null) {
+        valStr = currentRef.toFixed(1);
+      } else {
+        const min = parseFloat(this._els.refMin.value) || 0;
+        const max = parseFloat(this._els.refMax.value) || 15;
+        valStr = (min + clampedPot * (max - min)).toFixed(1);
+      }
+      this._els.gaugeValue.textContent = `${valStr} ${unit}`;
+    }
   }
 
   /**
@@ -167,8 +245,15 @@ export class ConfigPanel {
     if (group === 'ref') {
       this._els.refLevels.value   = def.refLevels;
       this._els.refInterval.value = def.refInterval;
+      this._els.refMin.value      = def.refMin;
+      this._els.refMax.value      = def.refMax;
+
       this._modeState[mode].refLevels   = def.refLevels;
       this._modeState[mode].refInterval = def.refInterval;
+      this._modeState[mode].refMin      = def.refMin;
+      this._modeState[mode].refMax      = def.refMax;
+
+      this.setRefType('internal');
     } else if (group === 'eq') {
       this._els.vecE.value = def.vecE;
       this._els.vecU.value = def.vecU;
@@ -182,15 +267,25 @@ export class ConfigPanel {
   init() {
     this._applyState(this._modeState[this._currentMode]);
     this._validate();
+    this.updateGauge(0.0, null);
   }
 
   // ---- Métodos internos -----------------------------------------------
 
   _bind() {
-    const { vecE, vecU, refLevels, refInterval } = this._els;
-    [vecE, vecU, refLevels, refInterval].forEach(el => {
-      el.addEventListener('input', () => this._validate());
+    const { vecE, vecU, refLevels, refInterval, refMin, refMax, btnRefInternal, btnRefExternal } = this._els;
+
+    [vecE, vecU, refLevels, refInterval, refMin, refMax].forEach(el => {
+      el.addEventListener('input', () => {
+        this._updateGaugeScaleLabels();
+        this._validate();
+        this.updateGauge(this._lastPotNorm, this._lastRef);
+      });
     });
+
+    btnRefInternal.addEventListener('click', () => this.setRefType('internal'));
+    btnRefExternal.addEventListener('click', () => this.setRefType('external'));
+
     document.querySelectorAll('input[name="mode"]').forEach(r => {
       r.addEventListener('change', () => this._onModeChange());
     });
@@ -204,12 +299,16 @@ export class ConfigPanel {
     this._applyState(this._modeState[newMode]);
     this._currentMode = newMode;
     this._validate();
+    this.updateGauge(this._lastPotNorm, this._lastRef);
   }
 
   _captureInputs() {
     return {
+      refType:     this._refType,
       refLevels:   this._els.refLevels.value,
       refInterval: this._els.refInterval.value,
+      refMin:      this._els.refMin.value,
+      refMax:      this._els.refMax.value,
       vecE:        this._els.vecE.value,
       vecU:        this._els.vecU.value,
     };
@@ -218,23 +317,49 @@ export class ConfigPanel {
   _applyState(state) {
     this._els.refLevels.value   = state.refLevels;
     this._els.refInterval.value = state.refInterval;
+    this._els.refMin.value      = state.refMin;
+    this._els.refMax.value      = state.refMax;
     this._els.vecE.value        = state.vecE;
     this._els.vecU.value        = state.vecU;
-    this._els.refUnit.textContent = UNIT_LABELS[this.mode];
+
+    const unit = UNIT_LABELS[this.mode];
+    this._els.refUnit.textContent    = unit;
+    this._els.refMinUnit.textContent = unit;
+    this._els.refMaxUnit.textContent = unit;
+
+    this.setRefType(state.refType || 'internal');
+    this._updateGaugeScaleLabels();
+  }
+
+  _updateGaugeScaleLabels() {
+    if (this._els.gaugeLabelMin) {
+      this._els.gaugeLabelMin.textContent = this._els.refMin.value;
+    }
+    if (this._els.gaugeLabelMax) {
+      this._els.gaugeLabelMax.textContent = this._els.refMax.value;
+    }
   }
 
   _validate() {
     const eArr = parseVec(this._els.vecE.value);
     const uArr = parseVec(this._els.vecU.value);
-    const lArr = parseVec(this._els.refLevels.value);
-    const iv   = parseInt(this._els.refInterval.value, 10);
-
     const eEmpty = this._els.vecE.value.trim() === '';
 
-    this._setErr(this._els.vecE,       eArr === null || eEmpty);
-    this._setErr(this._els.vecU,       uArr === null);
-    this._setErr(this._els.refLevels,  lArr === null || lArr.length === 0);
-    this._setErr(this._els.refInterval, isNaN(iv) || iv < 1);
+    this._setErr(this._els.vecE, eArr === null || eEmpty);
+    this._setErr(this._els.vecU, uArr === null);
+
+    if (this._refType === 'external') {
+      const min = parseFloat(this._els.refMin.value);
+      const max = parseFloat(this._els.refMax.value);
+      const err = isNaN(min) || isNaN(max) || min >= max;
+      this._setErr(this._els.refMin, err);
+      this._setErr(this._els.refMax, err);
+    } else {
+      const lArr = parseVec(this._els.refLevels.value);
+      const iv   = parseInt(this._els.refInterval.value, 10);
+      this._setErr(this._els.refLevels,  lArr === null || lArr.length === 0);
+      this._setErr(this._els.refInterval, isNaN(iv) || iv < 1);
+    }
 
     this._renderKatex(eArr, uArr);
     this._onValidChange(this.isValid);
