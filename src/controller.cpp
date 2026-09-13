@@ -20,6 +20,8 @@ static float          _u_hist[MAX_ORDER + 1] = {}; ///< u[k-1], u[k-2], ...
 static int            _refIndex    = 0;
 static float          _currentRef  = 0.0;
 static unsigned long  _timerRef    = 0;
+unsigned long timer = 0;
+
 
 // -------------------------------------------------------
 /// @brief Reinicia os buffers historicos e estados do encoder.
@@ -31,7 +33,12 @@ static void _reset_state() {
     }
     encoder_reset();
     _refIndex   = 0;
-    _currentRef = (_params.levelCount > 0) ? _params.levels[0] : 0.0f;
+    if (_params.refType == REF_EXTERNAL) {
+        float potNorm = constrain((float)analogRead(POT_PIN) / 4095.0f, 0.0f, 1.0f);
+        _currentRef   = _params.refMin + potNorm * (_params.refMax - _params.refMin);
+    } else {
+        _currentRef = (_params.levelCount > 0) ? _params.levels[0] : 0.0f;
+    }
     _timerRef   = millis();
 }
 
@@ -57,6 +64,7 @@ void controller_init(Motor* motor, Encoder* encoder, QueueHandle_t qEvents, Queu
     _qEvents = qEvents;
     _qPlot   = qPlot;
     _state   = STATE_IDLE;
+    pinMode(POT_PIN, INPUT);
 }
 
 FsmState controller_get_state() {
@@ -66,7 +74,7 @@ FsmState controller_get_state() {
 void controller_task(void* pvParameters) {
     (void)pvParameters;
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(SAMPLE_TIME_MS);
+    unsigned long idlePotTimer = 0;
 
     for (;;) {
         // --- Processamento de eventos recebidos da fila ---
@@ -85,9 +93,26 @@ void controller_task(void* pvParameters) {
 
         // --- Maquina de Estados (FSM) ---
         switch (_state) {
-            case STATE_IDLE:
+            case STATE_IDLE: {
+                // Envia leitura do potenciometro a cada 100 ms em repouso
+                unsigned long now = millis();
+                if (now - idlePotTimer >= 100) {
+                    idlePotTimer = now;
+                    if (_qPlot != nullptr) {
+                        float potNorm = constrain((float)analogRead(POT_PIN) / 4095.0f, 0.0f, 1.0f);
+                        PlotSample sample;
+                        sample.ref          = 0.0f;
+                        sample.medida       = 0.0f;
+                        sample.pwm          = 0;
+                        sample.mode         = _params.mode;
+                        sample.potNorm      = potNorm;
+                        sample.isIdleSample = true;
+                        xQueueSend(_qPlot, &sample, 0);
+                    }
+                }
                 vTaskDelay(pdMS_TO_TICKS(10));
                 break;
+            }
 
             case STATE_STOPPING:
                 _motor->setSpeed(0);
@@ -96,59 +121,73 @@ void controller_task(void* pvParameters) {
                 break;
 
             case STATE_RUNNING: {
-                vTaskDelayUntil(&xLastWakeTime, xFrequency);
+                if (millis() - timer >= SAMPLE_TIME_MS) {
+                    unsigned long now = millis();
 
-                unsigned long now = millis();
+                    // Leitura do potenciometro em tempo real
+                    float potNorm = constrain((float)analogRead(POT_PIN) / 4095.0f, 0.0f, 1.0f);
 
-                // Atualizacao da referencia ciclica
-                if (now - _timerRef >= (unsigned long)_params.intervalMs) {
-                    if (_params.levelCount > 0) {
-                        _refIndex   = (_refIndex + 1) % _params.levelCount;
-                        _currentRef = _params.levels[_refIndex];
+                    if (_params.refType == REF_EXTERNAL) {
+                        _currentRef = _params.refMin + potNorm * (_params.refMax - _params.refMin);
+                    } else {
+                        // Atualizacao da referencia interna por degraus
+                        if (now - _timerRef >= (unsigned long)_params.intervalMs) {
+                            if (_params.levelCount > 0) {
+                                _refIndex   = (_refIndex + 1) % _params.levelCount;
+                                _currentRef = _params.levels[_refIndex];
+                            }
+                            _timerRef = now;
+                        }
                     }
-                    _timerRef = now;
-                }
 
-                // Deslocamento dos historicos e[k-1], u[k-1], etc.
-                for (int i = MAX_ORDER; i > 0; i--) {
-                    _e_hist[i] = _e_hist[i - 1];
-                    _u_hist[i] = _u_hist[i - 1];
-                }
+                    // Deslocamento dos historicos e[k-1], u[k-1], etc.
+                    for (int i = MAX_ORDER; i > 0; i--) {
+                        _e_hist[i] = _e_hist[i - 1];
+                        _u_hist[i] = _u_hist[i - 1];
+                    }
 
-                // Medicao e calculo do erro atual
-                float medida = 0.0f;
-                if (_params.mode == MODE_SPEED) {
-                    medida     = _encoder->get_omega(SAMPLE_TIME_MS);
-                    _e_hist[0] = _currentRef - medida;
-                } else {
-                    medida     = encoder_get_angle_rad() * RAD_TO_DEG;
-                    _e_hist[0] = _currentRef - medida;
-                }
+                    // Medicao e calculo do erro atual
+                    float medida = 0.0f;
+                    if (_params.mode == MODE_SPEED) {
+                        medida     = _encoder->get_omega(SAMPLE_TIME_MS);
+                        _e_hist[0] = _currentRef - medida;
+                    } else {
+                        medida     = encoder_get_angle_rad() * RAD_TO_DEG;
+                        _e_hist[0] = _currentRef - medida;
+                    }
 
-                // Calculo da equacao de diferencas
-                float u_now = _compute_control();
+                    // Calculo da equacao de diferencas
+                    float u_now = _compute_control();
 
                 // Saturacao do sinal de controle
                 int pwm_out = 0;
+                float u_hist_val = u_now;
+                
                 if (_params.mode == MODE_SPEED) {
                     u_now   = constrain(u_now, 0.0f, 255.0f);
                     pwm_out = (int)u_now;
+                    u_hist_val = u_now; // Speed control antigo saturava o historico
                 } else {
-                    u_now   = constrain(u_now, -255.0f, 255.0f);
-                    pwm_out = (int)u_now;
+                    float u_sat = constrain(u_now, -255.0f, 255.0f);
+                    pwm_out = (int)u_sat;
+                    u_hist_val = u_now; // Position control antigo NÃO saturava o historico (Windup bug)
                 }
 
-                _u_hist[0] = u_now;
+                _u_hist[0] = u_hist_val;
                 _motor->setSpeed(pwm_out);
 
-                // Enfileira amostra para telemetria sem bloquear
-                if (_qPlot != nullptr) {
-                    PlotSample sample;
-                    sample.ref    = _currentRef;
-                    sample.medida = medida;
-                    sample.pwm    = pwm_out;
-                    sample.mode   = _params.mode;
-                    xQueueSend(_qPlot, &sample, 0);
+                    // Enfileira amostra para telemetria sem bloquear
+                    if (_qPlot != nullptr) {
+                        PlotSample sample;
+                        sample.ref          = _currentRef;
+                        sample.medida       = medida;
+                        sample.pwm          = pwm_out;
+                        sample.mode         = _params.mode;
+                        sample.potNorm      = potNorm;
+                        sample.isIdleSample = false;
+                        xQueueSend(_qPlot, &sample, 0);
+                    }
+                    timer = millis();
                 }
                 break;
             }

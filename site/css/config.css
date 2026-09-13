@@ -1,0 +1,346 @@
+/* ============================================================
+   config.css — painel esquerdo de configuração (40% do grid)
+   ============================================================ */
+
+#config-panel {
+  height: 100%;
+  overflow-y: auto;
+  background: var(--color-bg);
+  padding: var(--panel-padding) 26px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Grupo de configuração ---- */
+.config-group {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.config-group:first-child   { padding-top: 6px; }
+.config-group:last-of-type  { border-bottom: none; }
+
+/* ---- Cabeçalho do grupo: label + botões ---- */
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 8px;
+}
+
+.group-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  line-height: 1;
+}
+
+.group-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Botão miniatura de ação de grupo (reset e ajuda) */
+.btn-group-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  transition: background var(--transition), color var(--transition);
+}
+
+.btn-group-action:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-primary);
+}
+
+/* ---- Radio buttons de modo ---- */
+.radio-group {
+  display: flex;
+  gap: 22px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--color-text);
+  user-select: none;
+}
+
+.radio-label input[type="radio"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--color-primary);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* ---- Linhas de input ---- */
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.input-row:last-of-type { margin-bottom: 0; }
+
+.input-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  width: 56px;
+  flex-shrink: 0;
+}
+
+.input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.input-mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 7px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  outline: none;
+  width: 100%;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.input-mono:focus { border-color: var(--color-primary); }
+
+.input-mono.is-invalid {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.input-narrow {
+  width: 74px;
+  flex: none;
+}
+
+.input-unit {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ---- Container KaTeX ---- */
+.katex-container {
+  margin-top: 16px;
+  padding: 14px 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  text-align: center;
+  min-height: 54px;
+  /* display: flex; */
+  align-items: center;
+  justify-content: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.katex-container .katex-placeholder {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-family: var(--font-body);
+}
+
+/* ---- Aviso de compatibilidade ---- */
+#compat-warning {
+  background: var(--color-warning-bg);
+  border: 1px solid #e8d080;
+  color: var(--color-warning);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  line-height: 1.5;
+}
+
+/* ---- Segmented Control para Referência ---- */
+.segmented-control {
+  display: flex;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 2px;
+  margin-bottom: 14px;
+  gap: 2px;
+}
+
+.segmented-btn {
+  flex: 1;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  background: transparent;
+  color: var(--color-text-muted);
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  text-align: center;
+}
+
+.segmented-btn:hover {
+  color: var(--color-text);
+}
+
+.segmented-btn.active {
+  background: var(--color-bg);
+  color: var(--color-primary);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.ref-subgroup[hidden] {
+  display: none;
+}
+
+/* ---- Gauge do Potenciômetro ---- */
+.pot-gauge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+  padding: 10px 14px 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.pot-gauge-svg {
+  width: 140px;
+  height: 75px;
+  display: block;
+  overflow: visible;
+}
+
+.gauge-track {
+  fill: none;
+  stroke: #E0E4EC;
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.gauge-fill {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 80ms linear;
+}
+
+.gauge-info {
+  text-align: center;
+  margin-top: -6px;
+}
+
+.gauge-value {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1.2;
+}
+
+.gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  width: 140px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+
+.pot-pct-badge {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+
+/* ---- Rodapé minimalista do painel ---- */
+.config-footer {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #777777;
+}
+
+.footer-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.footer-github-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  color: #666666;
+}
+
+.footer-sep {
+  color: #AAAAAA;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.footer-link {
+  color: #666666;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color var(--transition);
+}
+
+.footer-link:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.footer-version {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #777777;
+}
+
+.footer-placeholder {
+  color: #AAAAAA;
+}
+
+

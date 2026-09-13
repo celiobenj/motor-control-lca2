@@ -10,9 +10,10 @@
 #define MOTOR_PIN2      19
 #define MOTOR_PWM       4
 
-// --- Pinos do encoder ---
+// --- Pinos do encoder e potenciômetro ---
 #define ENC_A           12
 #define ENC_B           13
+#define POT_PIN         34      ///< Entrada analógica ADC1 para referência externa
 
 // --- Parametros de amostragem e limites ---
 #define SAMPLE_TIME_MS  35      ///< Periodo de amostragem em milissegundos

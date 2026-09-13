@@ -21,7 +21,7 @@ public:
     bool direcao = true;
 
     // Quantidade de pulsos por revolucao do motor
-    const float ENC_COUNT_REV = 1368.4;
+    const int ENC_COUNT_REV = 1368.4;
     
     // Variavel para a contagem dos pulsos
     volatile long pulses_motor = 0;
