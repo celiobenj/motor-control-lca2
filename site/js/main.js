@@ -43,8 +43,9 @@ const els = {
   // Charts
   canvasMain:     document.getElementById('chart-main'),
   canvasControl:  document.getElementById('chart-control'),
-  timeWindow:     document.getElementById('time-window'),
-  btnPause:       document.getElementById('btn-pause'),
+  timeWindow:         document.getElementById('time-window'),
+  checkCursorVisible: document.getElementById('check-cursor-visible'),
+  btnPause:           document.getElementById('btn-pause'),
   iconPause:      document.getElementById('icon-pause'),
   iconResume:     document.getElementById('icon-resume'),
   btnClear:       document.getElementById('btn-clear'),
@@ -152,6 +153,11 @@ function _bindEvents() {
   // Janela de tempo
   els.timeWindow.addEventListener('change', () => {
     charts.setWindow(parseInt(els.timeWindow.value, 10));
+  });
+
+  // Cursor visível (toggle)
+  els.checkCursorVisible?.addEventListener('change', () => {
+    charts.setCursorVisible(els.checkCursorVisible.checked);
   });
 
   // Pausar / Retomar
