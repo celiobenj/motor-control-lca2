@@ -72,6 +72,24 @@
   cursor: pointer;
 }
 
+.toolbar-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: 500;
+  user-select: none;
+  margin-left: 6px;
+}
+.toolbar-check input[type="checkbox"] {
+  accent-color: var(--color-primary);
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+
 /* ---- Contêineres dos gráficos ---- */
 .chart-container {
   flex: 1;
