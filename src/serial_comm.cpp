@@ -41,6 +41,15 @@ static void _process_json_line(const char* jsonStr) {
         return;
     }
 
+    // Reiniciar base de tempo (t = 0)
+    if (strcmp(cmd, "reset_time") == 0) {
+        FsmEventMessage msg;
+        msg.type = EVT_RESET_TIME;
+        xQueueSend(_qEvents, &msg, portMAX_DELAY);
+        Serial.println("{\"status\":\"ok\"}");
+        return;
+    }
+
     // Aplicar parametros e iniciar controle
     FsmEventMessage msg;
     msg.type = EVT_APPLY;
@@ -125,6 +134,9 @@ void serial_comm_task(void* pvParameters) {
                 Serial.println(sample.potNorm, 4);
             } else {
                 // Em operacao: telemetria completa de controle
+                Serial.print(">t:");
+                Serial.println(sample.t_ms);
+
                 Serial.print(">ref:");
                 Serial.println(sample.ref);
 

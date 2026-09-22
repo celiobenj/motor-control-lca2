@@ -114,8 +114,8 @@ let _connState = 'disconnected'; // disconnected | waiting | connected | running
 let _pendingResetGroup = null;   // 'ref' | 'eq'
 let _stopTimer = null;
 
-// Trio de telemetria acumulado por ciclo
-let _cycleBuf = { ref: null, medida: null, u: null };
+// Quarteto de telemetria acumulado por ciclo (tempo, referencia, medida, controle u)
+let _cycleBuf = { t: null, ref: null, medida: null, u: null };
 
 // ---- Init ----------------------------------------------------------
 
@@ -160,7 +160,14 @@ function _bindEvents() {
   // Limpar (com modal de confirmação)
   els.btnClear.addEventListener('click', () => { els.modalClear.hidden = false; });
   els.btnModalClearCancel.addEventListener('click',  () => { els.modalClear.hidden = true; });
-  els.btnModalClearConfirm.addEventListener('click', () => { charts.clear(); els.modalClear.hidden = true; });
+  els.btnModalClearConfirm.addEventListener('click', async () => {
+    charts.clear();
+    _cycleBuf = { t: null, ref: null, medida: null, u: null };
+    if (serial.connected) {
+      try { await serial.sendJson({ cmd: 'reset_time' }); } catch (_) {}
+    }
+    els.modalClear.hidden = true;
+  });
 
   // Exportar CSV
   els.btnExport.addEventListener('click', _onExportClick);
@@ -209,6 +216,8 @@ async function _onApplyClick() {
   const payload = config.getPayload();
   if (!payload) return;
   try {
+    charts.clear();
+    _cycleBuf = { t: null, ref: null, medida: null, u: null };
     await serial.sendJson(payload);
     charts.setMode(config.mode);
     _applyConnState('running');
@@ -246,10 +255,11 @@ function _onPauseClick() {
 }
 
 function _onExportClick() {
-  const samples = els.csvVisible.checked
+  const isVisible = els.csvVisible.checked;
+  const samples = isVisible
     ? charts.getVisibleSamples()
     : charts.getAllSamples();
-  exportCsv(samples, config.mode);
+  exportCsv(samples, config.mode, isVisible);
 }
 
 // ---- Modais --------------------------------------------------------
@@ -289,7 +299,9 @@ function _onSerialLine(line) {
     const val  = parseFloat(line.substring(colon + 1));
     if (isNaN(val)) return;
 
-    if (name === 'pot') {
+    if (name === 't') {
+      _cycleBuf.t = val;
+    } else if (name === 'pot') {
       config.updateGauge(val, _cycleBuf.ref);
     } else if (name === 'ref') {
       _cycleBuf.ref = val;
@@ -303,8 +315,9 @@ function _onSerialLine(line) {
     }
 
     if (_cycleBuf.ref !== null && _cycleBuf.medida !== null && _cycleBuf.u !== null) {
-      charts.pushSample(_cycleBuf.ref, _cycleBuf.medida, _cycleBuf.u);
-      _cycleBuf = { ref: null, medida: null, u: null };
+      const t_ms = (_cycleBuf.t !== null) ? _cycleBuf.t : 0;
+      charts.pushSample(t_ms, _cycleBuf.ref, _cycleBuf.medida, _cycleBuf.u);
+      _cycleBuf = { t: null, ref: null, medida: null, u: null };
     }
   }
 }
