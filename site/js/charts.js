@@ -20,10 +20,10 @@ function baseChartOptions(yLabel) {
         labels: {
           font: { family: "'Roboto', Arial, sans-serif", size: 12 },
           color: '#555555',
-          boxWidth: 20,
-          boxHeight: 2,
+          boxWidth: 16,
+          boxHeight: 8,
           padding: 12,
-          usePointStyle: false,
+          usePointStyle: true,
         },
       },
       tooltip: {
@@ -99,15 +99,18 @@ export class ChartManager {
             borderWidth:     2,
             // borderDash:      [6, 4],   // Referência pontilhada
             pointRadius:     0,
+            showLine:        true,
             tension:         0,
           },
           {
             label:           'Medição',
             data:            [],
             borderColor:     '#E65100',
-            backgroundColor: 'transparent',
-            borderWidth:     2,
-            pointRadius:     0,
+            backgroundColor: '#E65100',
+            borderWidth:     0,
+            pointRadius:     1.5,
+            pointHoverRadius: 3.0,
+            showLine:        false,
             tension:         0,
           },
         ],
@@ -123,9 +126,11 @@ export class ChartManager {
             label:           'u',
             data:            [],
             borderColor:     '#1A3A5C',
-            backgroundColor: 'transparent',
-            borderWidth:     2,
-            pointRadius:     0,
+            backgroundColor: '#1A3A5C',
+            borderWidth:     0,
+            pointRadius:     1.5,
+            pointHoverRadius: 3.0,
+            showLine:        false,
             tension:         0,
           },
         ],
@@ -135,15 +140,13 @@ export class ChartManager {
   }
 
   /**
-   * Adiciona nova amostra de telemetria.
+   * Adiciona nova amostra de telemetria com timestamp do microcontrolador.
+   * @param {number} t_ms tempo decorrido em ms vindo da ESP32
    * @param {number} ref medida de referência
    * @param {number} medida valor medido pelo sensor
    * @param {number} u sinal de controle (PWM)
    */
-  pushSample(ref, medida, u) {
-    const now = performance.now();
-    if (this._timeOrigin === null) this._timeOrigin = now;
-    const t_ms = Math.round(now - this._timeOrigin);
+  pushSample(t_ms, ref, medida, u) {
     const t_s  = t_ms / 1000;
 
     this._all.push({ t_ms, t_s, ref, medida, u });

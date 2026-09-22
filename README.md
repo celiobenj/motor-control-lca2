@@ -71,9 +71,11 @@ Para iniciar ou atualizar os parâmetros de controle, o frontend envia para a ES
 Comandos de controle adicionais:
 - `{"cmd":"stop"}`: Interrompe o motor imediatamente e redefine o controlador para o estado IDLE.
 - `{"cmd":"ping"}`: Handshake de verificação da conexão serial.
+- `{"cmd":"reset_time"}`: Reinicia a contagem de tempo ($t = 0\text{ ms}$) da telemetria.
 
 ### 2. Telemetria (ESP32 -> Navegador)
 Transmitida em padrão [Teleplot](https://teleplot.fr/) linha a linha:
+- `>t:<valor>`: Tempo decorrido em milissegundos desde o início do ensaio.
 - `>ref:<valor>`: Valor atual da referência.
 - `>omega:<valor>` ou `>angulo:<valor>`: Medição atual do encoder (velocidade ou posição).
 - `>u:<valor>`: Sinal de controle calculado (PWM de 0 a 255 em velocidade, -255 a 255 em posição).
