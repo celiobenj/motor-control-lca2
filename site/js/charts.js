@@ -4,6 +4,42 @@
 
 /** @typedef {{ t_ms: number, t_s: number, ref: number, medida: number, u: number }} Sample */
 
+/** Formata valores do tooltip: inteiros quando exatos ou com até 2 casas decimais */
+function formatSampleValue(val) {
+  const num = Number(val);
+  if (isNaN(num)) return '';
+  if (Number.isInteger(num) || Math.abs(num - Math.round(num)) < 1e-4) {
+    return Math.round(num).toString();
+  }
+  return num.toFixed(2);
+}
+
+/** Plugin Chart.js para desenhar linha vertical tracejada sincronizada nos dois gráficos */
+const dualCrosshairPlugin = {
+  id: 'dualCrosshair',
+  afterDatasetsDraw: (chart) => {
+    const manager = chart._manager;
+    if (!manager || !manager._cursorVisible || manager._hoveredTime == null) return;
+    const xScale = chart.scales?.x;
+    if (!xScale) return;
+
+    const xPixel = xScale.getPixelForValue(manager._hoveredTime);
+    const { top, bottom, left, right } = chart.chartArea;
+    if (xPixel < left || xPixel > right) return;
+
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.beginPath();
+    ctx.setLineDash([4, 3]);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(74, 85, 104, 0.75)';
+    ctx.moveTo(xPixel, top);
+    ctx.lineTo(xPixel, bottom);
+    ctx.stroke();
+    ctx.restore();
+  },
+};
+
 function baseChartOptions(yLabel) {
   return {
     responsive:           true,
@@ -20,21 +56,25 @@ function baseChartOptions(yLabel) {
         labels: {
           font: { family: "'Roboto', Arial, sans-serif", size: 12 },
           color: '#555555',
-          boxWidth: 20,
-          boxHeight: 2,
+          boxWidth: 16,
+          boxHeight: 8,
           padding: 12,
-          usePointStyle: false,
+          usePointStyle: true,
         },
       },
       tooltip: {
         enabled: true,
-        backgroundColor: '#1A1A1A',
+        backgroundColor: 'rgba(26, 32, 44, 0.82)',
+        borderColor:     'rgba(255, 255, 255, 0.18)',
+        borderWidth:     1,
+        cornerRadius:    6,
+        boxPadding:      4,
+        padding:         9,
         titleFont:  { size: 12, family: "'Roboto', Arial, sans-serif" },
         bodyFont:   { size: 12, family: "'Roboto Mono', monospace" },
-        padding: 9,
         callbacks: {
-          title: items => `t = ${Number(items[0].parsed.x).toFixed(2)} s`,
-          label: item  => ` ${item.dataset.label}: ${Number(item.parsed.y).toFixed(3)}`,
+          title: items => `t = ${Number(items[0].parsed.x).toFixed(3)} s`,
+          label: item  => ` ${item.dataset.label}: ${formatSampleValue(item.parsed.y)}`,
         },
       },
     },
@@ -77,6 +117,9 @@ export class ChartManager {
     this._isPaused   = false;
     this._windowSec  = 15;    // 0 = sem janela, padrão 15s
     this._rafPending = false;
+    this._cursorVisible = true; // Controlado pelo checkbox [ ] Cursor Visível
+    this._hoveredTime = null;   // Tempo em segundos sob o cursor ativo (para cursor duplo)
+    this._mouseState  = null;   // { canvas, clientX, clientY } da posição física do mouse
 
     /** Snapshot tirado no momento da pausa — null quando não pausado. */
     this._pauseSnapshot = null;
@@ -99,20 +142,26 @@ export class ChartManager {
             borderWidth:     2,
             // borderDash:      [6, 4],   // Referência pontilhada
             pointRadius:     0,
+            pointHoverRadius: 0,
+            showLine:        true,
             tension:         0,
           },
           {
             label:           'Medição',
             data:            [],
             borderColor:     '#E65100',
-            backgroundColor: 'transparent',
-            borderWidth:     2,
-            pointRadius:     0,
+            backgroundColor: '#E65100',
+            borderWidth:     0,
+            pointRadius:     1.5,
+            pointHoverRadius: 4.5,
+            pointHitRadius:  10,
+            showLine:        false,
             tension:         0,
           },
         ],
       },
       options: baseChartOptions(''),
+      plugins: [dualCrosshairPlugin],
     });
 
     this._chartControl = new Chart(canvasControl, {
@@ -123,27 +172,34 @@ export class ChartManager {
             label:           'u',
             data:            [],
             borderColor:     '#1A3A5C',
-            backgroundColor: 'transparent',
-            borderWidth:     2,
-            pointRadius:     0,
+            backgroundColor: '#1A3A5C',
+            borderWidth:     0,
+            pointRadius:     1.5,
+            pointHoverRadius: 4.5,
+            pointHitRadius:  10,
+            showLine:        false,
             tension:         0,
           },
         ],
       },
       options: baseChartOptions('u (PWM)'),
+      plugins: [dualCrosshairPlugin],
     });
+
+    this._chartMain._manager    = this;
+    this._chartControl._manager = this;
+
+    this._setupSync(canvasMain, canvasControl);
   }
 
   /**
-   * Adiciona nova amostra de telemetria.
+   * Adiciona nova amostra de telemetria com timestamp do microcontrolador.
+   * @param {number} t_ms tempo decorrido em ms vindo da ESP32
    * @param {number} ref medida de referência
    * @param {number} medida valor medido pelo sensor
    * @param {number} u sinal de controle (PWM)
    */
-  pushSample(ref, medida, u) {
-    const now = performance.now();
-    if (this._timeOrigin === null) this._timeOrigin = now;
-    const t_ms = Math.round(now - this._timeOrigin);
+  pushSample(t_ms, ref, medida, u) {
     const t_s  = t_ms / 1000;
 
     this._all.push({ t_ms, t_s, ref, medida, u });
@@ -156,6 +212,22 @@ export class ChartManager {
   setWindow(seconds) {
     this._windowSec = seconds;
     if (!this._isPaused) this._scheduleRender();
+  }
+
+  /** Define se o cursor (tooltips, retículo e destaque de pontos) está visível. */
+  setCursorVisible(visible) {
+    this._cursorVisible = visible;
+    if (this._chartMain) {
+      this._chartMain.options.plugins.tooltip.enabled = visible;
+      this._chartMain.update('none');
+    }
+    if (this._chartControl) {
+      this._chartControl.options.plugins.tooltip.enabled = visible;
+      this._chartControl.update('none');
+    }
+    if (!visible) {
+      this._clearSync();
+    }
   }
 
   /** Atualiza o label da série de medição conforme o modo. */
@@ -189,6 +261,7 @@ export class ChartManager {
     this._all            = [];
     this._timeOrigin     = null;
     this._pauseSnapshot  = null;
+    this._clearSync();
     this._applyToCharts([], [], [], 0, this._windowSec || null);
   }
 
@@ -274,6 +347,11 @@ export class ChartManager {
       minT,
       maxT,
     );
+
+    // Se o mouse estiver sobre o gráfico enquanto a janela se move, sincroniza na nova posição
+    if (this._mouseState) {
+      this._syncFromMouse();
+    }
   }
 
   _applyToCharts(refData, medidaData, uData, minT, maxT) {
@@ -291,4 +369,140 @@ export class ChartManager {
     chart.options.scales.x.min = minT ?? undefined;
     chart.options.scales.x.max = (maxT != null && maxT > (minT ?? 0)) ? maxT : (minT ?? 0) + 1;
   }
+
+  /**
+   * Configura listeners de eventos do mouse para sincronização bidirecional.
+   */
+  _setupSync(canvasMain, canvasControl) {
+    const handleMove = (canvas, e) => {
+      this._mouseState = { canvas, clientX: e.clientX, clientY: e.clientY };
+      this._syncFromMouse();
+    };
+
+    canvasMain.addEventListener('mousemove', e => handleMove(canvasMain, e));
+    canvasControl.addEventListener('mousemove', e => handleMove(canvasControl, e));
+
+    canvasMain.addEventListener('mouseleave', () => this._clearSync());
+    canvasControl.addEventListener('mouseleave', () => this._clearSync());
+  }
+
+  /**
+   * Busca binária pelo índice da amostra com tempo x mais próximo de tVal.
+   */
+  _findNearestIndex(data, tVal) {
+    if (!data || data.length === 0) return -1;
+    let lo = 0, hi = data.length - 1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (data[mid].x < tVal) lo = mid + 1;
+      else hi = mid - 1;
+    }
+    if (lo >= data.length) return data.length - 1;
+    if (lo <= 0) return 0;
+    const diffPrev = Math.abs(data[lo - 1].x - tVal);
+    const diffCurr = Math.abs(data[lo].x - tVal);
+    return diffPrev <= diffCurr ? lo - 1 : lo;
+  }
+
+  /**
+   * Sincroniza retículo vertical, destaque de pontos e tooltips em ambos os gráficos.
+   */
+  _syncFromMouse() {
+    if (!this._cursorVisible || !this._mouseState) return;
+
+    const { canvas, clientX, clientY } = this._mouseState;
+    const isMain = (canvas === this._chartMain?.canvas);
+    const sourceChart = isMain ? this._chartMain : this._chartControl;
+    const targetChart = isMain ? this._chartControl : this._chartMain;
+
+    if (!sourceChart || !targetChart) return;
+    const { chartArea } = sourceChart;
+    if (!chartArea) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    if (x < chartArea.left || x > chartArea.right || y < chartArea.top || y > chartArea.bottom) {
+      this._clearSync();
+      return;
+    }
+
+    const xScale = sourceChart.scales?.x;
+    if (!xScale) return;
+
+    const tVal = xScale.getValueForPixel(x);
+    const sourceData = sourceChart.data.datasets[0]?.data;
+    if (!sourceData || sourceData.length === 0) {
+      this._clearSync();
+      return;
+    }
+
+    const idx = this._findNearestIndex(sourceData, tVal);
+    if (idx < 0 || idx >= sourceData.length) {
+      this._clearSync();
+      return;
+    }
+
+    this._hoveredTime = sourceData[idx].x;
+
+    // Coleta elementos ativos para o gráfico de origem
+    const sourceDatasets = sourceChart.data.datasets;
+    const sourceActive = [];
+    let sourceAnchor = null;
+    for (let d = 0; d < sourceDatasets.length; d++) {
+      const meta = sourceChart.getDatasetMeta(d);
+      if (meta?.data?.[idx]) {
+        sourceActive.push({ datasetIndex: d, index: idx });
+        if (!sourceAnchor || d === 1) sourceAnchor = meta.data[idx];
+      }
+    }
+
+    // Coleta elementos ativos para o gráfico alvo
+    const targetDatasets = targetChart.data.datasets;
+    const targetActive = [];
+    let targetAnchor = null;
+    for (let d = 0; d < targetDatasets.length; d++) {
+      const meta = targetChart.getDatasetMeta(d);
+      if (meta?.data?.[idx]) {
+        targetActive.push({ datasetIndex: d, index: idx });
+        if (!targetAnchor || d === 1) targetAnchor = meta.data[idx];
+      }
+    }
+
+    // Destaca os pontos sob o cursor em ambos os gráficos (ativa pointHoverRadius)
+    sourceChart.setActiveElements(sourceActive);
+    targetChart.setActiveElements(targetActive);
+
+    // Ativa os tooltips em ambos os gráficos exatamente no ponto da amostra
+    if (sourceAnchor) {
+      sourceChart.tooltip.setActiveElements(sourceActive, { x: sourceAnchor.x, y: sourceAnchor.y });
+    }
+    if (targetAnchor) {
+      targetChart.tooltip.setActiveElements(targetActive, { x: targetAnchor.x, y: targetAnchor.y });
+    }
+
+    sourceChart.update('none');
+    targetChart.update('none');
+  }
+
+  /**
+   * Limpa a linha de retículo vertical, destaques de pontos e tooltips sincronizados.
+   */
+  _clearSync() {
+    this._mouseState = null;
+    if (this._hoveredTime == null && !this._chartMain?.tooltip?.getActiveElements()?.length) return;
+    this._hoveredTime = null;
+    if (this._chartMain) {
+      this._chartMain.setActiveElements([]);
+      this._chartMain.tooltip.setActiveElements([], {});
+      this._chartMain.update('none');
+    }
+    if (this._chartControl) {
+      this._chartControl.setActiveElements([]);
+      this._chartControl.tooltip.setActiveElements([], {});
+      this._chartControl.update('none');
+    }
+  }
 }
+

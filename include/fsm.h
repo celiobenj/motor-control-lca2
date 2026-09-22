@@ -39,7 +39,8 @@ enum FsmState {
 // -------------------------------------------------------
 enum FsmEventType {
     EVT_APPLY,       ///< Aplicar novos parametros e iniciar
-    EVT_STOP         ///< Parar motor e voltar para IDLE
+    EVT_STOP,        ///< Parar motor e voltar para IDLE
+    EVT_RESET_TIME   ///< Reiniciar a contagem de tempo (t = 0)
 };
 
 // -------------------------------------------------------
@@ -70,10 +71,11 @@ struct FsmEventMessage {
 /// @brief Amostra de telemetria enviada para a fila de plot.
 // -------------------------------------------------------
 struct PlotSample {
-    float       ref;
-    float       medida;
-    int         pwm;
-    ControlMode mode;
-    float       potNorm;      ///< Posicao normalizada do potenciometro [0.0 a 1.0]
-    bool        isIdleSample; ///< True se enviada em repouso
+    unsigned long t_ms;         ///< Tempo decorrido em ms desde o inicio do ensaio
+    float         ref;
+    float         medida;
+    int           pwm;
+    ControlMode   mode;
+    float         potNorm;      ///< Posicao normalizada do potenciometro [0.0 a 1.0]
+    bool          isIdleSample; ///< True se enviada em repouso
 };

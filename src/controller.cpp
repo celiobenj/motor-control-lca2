@@ -20,7 +20,8 @@ static float          _u_hist[MAX_ORDER + 1] = {}; ///< u[k-1], u[k-2], ...
 static int            _refIndex    = 0;
 static float          _currentRef  = 0.0;
 static unsigned long  _timerRef    = 0;
-unsigned long timer = 0;
+static unsigned long  _tInicio     = 0;  ///< Momento em ms em que o ensaio atual iniciou
+unsigned long         timer        = 0;
 
 
 // -------------------------------------------------------
@@ -40,6 +41,8 @@ static void _reset_state() {
         _currentRef = (_params.levelCount > 0) ? _params.levels[0] : 0.0f;
     }
     _timerRef   = millis();
+    _tInicio    = millis();
+    timer       = _tInicio;
 }
 
 // -------------------------------------------------------
@@ -88,6 +91,9 @@ void controller_task(void* pvParameters) {
                 xLastWakeTime = xTaskGetTickCount();
             } else if (msg.type == EVT_STOP) {
                 _state = STATE_STOPPING;
+            } else if (msg.type == EVT_RESET_TIME) {
+                _tInicio = millis();
+                timer    = _tInicio;
             }
         }
 
@@ -101,6 +107,7 @@ void controller_task(void* pvParameters) {
                     if (_qPlot != nullptr) {
                         float potNorm = constrain((float)analogRead(POT_PIN) / 4095.0f, 0.0f, 1.0f);
                         PlotSample sample;
+                        sample.t_ms         = 0;
                         sample.ref          = 0.0f;
                         sample.medida       = 0.0f;
                         sample.pwm          = 0;
@@ -179,6 +186,7 @@ void controller_task(void* pvParameters) {
                     // Enfileira amostra para telemetria sem bloquear
                     if (_qPlot != nullptr) {
                         PlotSample sample;
+                        sample.t_ms         = now - _tInicio;
                         sample.ref          = _currentRef;
                         sample.medida       = medida;
                         sample.pwm          = pwm_out;
