@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laboratório de Controle - Identificação do Motor DC</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+  <!-- CSS da aplicação -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/header.css">
+  <link rel="stylesheet" href="css/config.css">
+  <link rel="stylesheet" href="css/charts.css">
+</head>
+<body>
+
+<!-- ===================================================================
+     HEADER SUPERIOR
+     =================================================================== -->
+<header id="app-header">
+
+  <div class="header-logo">
+    <img src="favicon.svg" alt="Logo">
+    <span class="header-title">Laboratório de Controle - Identificação do Motor DC</span>
+  </div>
+
+  <div class="header-serial">
+    <span id="serial-badge" class="badge badge--disconnected" data-state="disconnected">Desconectado</span>
+    <span id="serial-port-name" class="port-name"></span>
+
+    <button id="btn-connect" class="btn btn--ghost" type="button" title="Conectar porta serial">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M8 2V9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M5.5 6.5L8 9.5L10.5 6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="5" y="10" width="6" height="4" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+      </svg>
+      Conectar
+    </button>
+
+    <button id="btn-disconnect" class="btn btn--ghost" type="button" title="Desconectar" hidden>
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      Desconectar
+    </button>
+  </div>
+
+  <div class="header-actions">
+    <button id="btn-apply" class="btn btn--primary" type="button" disabled title="Iniciar ensaio de identificação PRBS">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M2 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Iniciar
+    </button>
+
+    <button id="btn-stop" class="btn btn--danger" type="button" disabled title="Parar ensaio imediatamente">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/>
+      </svg>
+      Parar
+    </button>
+  </div>
+</header>
+
+<!-- ===================================================================
+     CONTEÚDO PRINCIPAL: CONFIGURAÇÃO | HANDLE | GRÁFICOS
+     =================================================================== -->
+<div id="app-content">
+
+  <!-- ---------------------------------------------------------------
+       PAINEL DE CONFIGURAÇÃO (esquerda — 40%)
+       --------------------------------------------------------------- -->
+  <aside id="config-panel">
+
+    <!-- Aviso de incompatibilidade de navegador -->
+    <div id="compat-warning" class="config-group" hidden>
+      <p style="font-size:13px;color:#B78103;line-height:1.5;">
+        Este navegador não suporta a Web Serial API.<br>
+        Utilize Google Chrome, Microsoft Edge ou Opera.
+      </p>
+    </div>
+
+    <!-- ---- GRANDEZA MEDIDA ---- -->
+    <div class="config-group">
+      <div class="group-header">
+        <span class="group-label">Grandeza Medida</span>
+        <div class="group-actions">
+          <button class="btn-group-action" id="btn-help-measure" type="button" title="Ajuda sobre a grandeza medida">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6.2 6.3a1.9 1.9 0 1 1 1.8 2.4V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <circle cx="8" cy="12" r="0.75" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="radio-group">
+        <label class="radio-label">
+          <input type="radio" name="measure" value="speed" checked>
+          Velocidade (rad/s)
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="measure" value="position">
+          Posição (rad)
+        </label>
+      </div>
+    </div>
+
+    <!-- ---- PARÂMETROS PRBS ---- -->
+    <div class="config-group">
+      <div class="group-header">
+        <span class="group-label">Sinal de Excitação PRBS</span>
+        <div class="group-actions">
+          <button class="btn-group-action" id="btn-reset-prbs" type="button" title="Restaurar parâmetros padrão">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M8 1v4l3-2z" fill="currentColor"/>
+            </svg>
+          </button>
+          <button class="btn-group-action" id="btn-help-prbs" type="button" title="Ajuda sobre o PRBS">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M6.2 6.3a1.9 1.9 0 1 1 1.8 2.4V10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <circle cx="8" cy="12" r="0.75" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Ts -->
+      <div class="input-row">
+        <span class="input-label" title="Período de amostragem">Ts</span>
+        <div class="input-wrap">
+          <input type="number" id="prbs-ts" class="input-mono input-narrow"
+                 min="1" max="100" step="1" value="5" title="Período de amostragem em ms">
+          <span class="input-unit">ms</span>
+        </div>
+      </div>
+
+      <!-- Stretch -->
+      <div class="input-row">
+        <span class="input-label" title="Stretch (amostras por bit)">Stretch</span>
+        <div class="input-wrap">
+          <input type="number" id="prbs-stretch" class="input-mono input-narrow"
+                 min="1" max="100" step="1" value="5" title="Quantidade de amostras consecutivas por bit">
+          <span class="input-unit">amostras/bit</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- RESUMO DA TELEMETRIA ---- -->
+    <div class="config-group">
+      <div class="group-header">
+        <span class="group-label">Telemetria em Tempo Real</span>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-title" title="Total de amostras coletadas">Amostras</span>
+          <span class="stat-value" id="stat-samples">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-title" title="Tempo decorrido de ensaio">Tempo</span>
+          <span class="stat-value" id="stat-time">0.0 s</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-title" title="Sinal de excitação PRBS atual">Último u(t)</span>
+          <span class="stat-value" id="stat-u">0</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-title" title="Resposta medida da planta atual">Último y(t)</span>
+          <span class="stat-value" id="stat-y">0.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- RODAPÉ: GITHUB, VERSÃO E CRÉDITOS ---- -->
+    <footer id="config-footer" class="config-footer">
+      <div class="footer-row">
+        <svg class="footer-github-icon" width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        <a href="https://github.com/celiobenj/motor-control-lca2" target="_blank" rel="noopener noreferrer" class="footer-link">GITHUB</a>
+        <span class="footer-sep">&bull;</span>
+        <span id="footer-version" class="footer-version"><span class="footer-placeholder">...</span></span>
+      </div>
+    </footer>
+
+  </aside>
+
+  <!-- Handle vertical: arrastar para redimensionar config vs. gráficos -->
+  <div id="resize-h" class="resize-handle resize-handle--v" title="Arrastar para redimensionar"></div>
+
+  <!-- ---------------------------------------------------------------
+       ÁREA DE GRÁFICOS (direita — 60%)
+       --------------------------------------------------------------- -->
+  <main id="charts-area">
+
+    <!-- Barra de ferramentas -->
+    <div id="chart-toolbar">
+
+      <!-- Janela de tempo -->
+      <div class="toolbar-group">
+        <span class="toolbar-label">Janela</span>
+        <select id="time-window" class="toolbar-select">
+          <option value="0">Tudo</option>
+          <option value="5">5 s</option>
+          <option value="15" selected>15 s</option>
+          <option value="30">30 s</option>
+          <option value="60">1 min</option>
+        </select>
+        <label class="toolbar-check" title="Exibir cursor com tooltips e retículo nos gráficos">
+          <input type="checkbox" id="check-cursor-visible" checked>
+          <span>Cursor Visível</span>
+        </label>
+      </div>
+
+      <div class="toolbar-sep"></div>
+
+      <!-- Pausar / Limpar -->
+      <div class="toolbar-group">
+        <button id="btn-pause" class="btn btn--icon btn--ghost" type="button" title="Pausar gráfico">
+          <span id="icon-pause">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/>
+              <rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/>
+            </svg>
+          </span>
+          <span id="icon-resume" hidden>
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M4 3L13 8L4 13V3Z" fill="currentColor"/>
+            </svg>
+          </span>
+        </button>
+
+        <button id="btn-clear" class="btn btn--icon btn--ghost" type="button" title="Limpar dados acumulados">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M2 4H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M5 4V2.5C5 2.22 5.22 2 5.5 2H10.5C10.78 2 11 2.22 11 2.5V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M3 4L3.8 13.5C3.9 13.8 4.15 14 4.5 14H11.5C11.85 14 12.1 13.8 12.2 13.5L13 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6.5 7V11M9.5 7V11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="toolbar-sep"></div>
+
+      <!-- Exportar CSV -->
+      <div class="toolbar-group">
+        <span class="toolbar-label">Exportar</span>
+        <label class="toolbar-radio">
+          <input type="radio" id="csv-all" name="csv-range" value="all" checked>
+          Tudo
+        </label>
+        <label class="toolbar-radio">
+          <input type="radio" id="csv-visible" name="csv-range" value="visible">
+          Visível
+        </label>
+        <button id="btn-export" class="btn btn--ghost" type="button" title="Exportar CSV">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M8 2V10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            <path d="M5 7.5L8 10.5L11 7.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 13.5H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- Gráfico 1: Resposta y(t) -->
+    <div class="chart-container" id="chart1-container">
+      <span class="chart-label" id="chart1-label">Resposta y(t) — Velocidade (rad/s)</span>
+      <canvas id="chart-main"></canvas>
+    </div>
+
+    <!-- Handle horizontal: arrastar para redimensionar gráfico 1 e 2 -->
+    <div id="resize-charts" class="resize-handle resize-handle--h" title="Arrastar para redimensionar"></div>
+
+    <!-- Gráfico 2: Excitação u(t) -->
+    <div class="chart-container" id="chart2-container">
+      <span class="chart-label" id="chart2-label">Excitação u(t) — Sinal PRBS (PWM)</span>
+      <canvas id="chart-control"></canvas>
+    </div>
+
+  </main>
+</div>
+
+<!-- ===================================================================
+     MODAIS
+     =================================================================== -->
+
+<!-- Confirmação: limpar dados -->
+<div id="modal-clear" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <p>Limpar todos os dados acumulados? Esta ação não poderá ser desfeita.</p>
+    <div class="modal-actions">
+      <button id="btn-modal-clear-cancel"  class="btn btn--ghost">Cancelar</button>
+      <button id="btn-modal-clear-confirm" class="btn btn--danger">Limpar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmação: restaurar padrões -->
+<div id="modal-reset" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <p id="modal-reset-text">Restaurar os parâmetros padrão do PRBS?</p>
+    <div class="modal-actions">
+      <button id="btn-modal-reset-cancel"  class="btn btn--ghost">Cancelar</button>
+      <button id="btn-modal-reset-confirm" class="btn btn--primary">Restaurar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ajuda contextual -->
+<div id="modal-help" class="modal-overlay" hidden>
+  <div class="modal-card modal-card--wide">
+    <div class="modal-help-header">
+      <h3 id="modal-help-title"></h3>
+      <button id="btn-modal-help-close" class="btn btn--icon btn--ghost" type="button" title="Fechar">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3 3L13 13M13 3L3 13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div id="modal-help-body" class="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn--primary" type="button" onclick="document.getElementById('modal-help').hidden=true">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================================
+     SCRIPTS
+     =================================================================== -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script type="module" src="js/main.js"></script>
+
+</body>
+</html>

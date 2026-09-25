@@ -1,0 +1,247 @@
+/* ============================================================
+   main.css — reset, variáveis globais, tipografia e grid raiz
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap');
+
+/* ---- Variáveis de design ---- */
+:root {
+  --color-primary:       #1A3A5C;
+  --color-primary-hover: #234d7a;
+  --color-danger:        #C53030;
+  --color-danger-hover:  #a02020;
+  --color-danger-bg:     #FCE8E8;
+  --color-success:       #2E7D32;
+  --color-success-bg:    #E6F4EA;
+  --color-running:       #1565C0;
+  --color-running-bg:    #E3F2FD;
+  --color-warning-bg:    #FFF8E1;
+  --color-warning:       #B78103;
+
+  --color-text:          #1A1A1A;
+  --color-text-muted:    #555555;
+  --color-border:        #D0D0D0;
+  --color-border-strong: #333333;
+  --color-surface:       #F5F6F8;
+  --color-surface-alt:   #EAECEF;
+  --color-bg:            #FFFFFF;
+
+  --font-body:  'Roboto', Arial, Helvetica, sans-serif;
+  --font-mono:  'Roboto Mono', 'Courier New', Courier, monospace;
+
+  --header-height:  58px;
+  --panel-padding:  24px;
+  --radius:         4px;
+  --transition:     150ms ease;
+}
+
+/* ---- Reset ---- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-text);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  line-height: 1.45;
+}
+
+/* ---- Grade raiz: header + conteúdo ---- */
+#app-content {
+  display: grid;
+  /* config | handle | charts */
+  grid-template-columns: minmax(260px, 32%) 5px 1fr;
+  height: calc(100vh - var(--header-height));
+  overflow: hidden;
+}
+
+/* ---- Handle de redimensionamento ---- */
+.resize-handle {
+  background: var(--color-border);
+  transition: background var(--transition);
+  flex-shrink: 0;
+  z-index: 5;
+}
+
+.resize-handle--v {
+  width: 5px;
+  cursor: col-resize;
+}
+.resize-handle--v:hover,
+.resize-handle--v.dragging { background: var(--color-primary); }
+
+.resize-handle--h {
+  height: 5px;
+  cursor: row-resize;
+}
+.resize-handle--h:hover,
+.resize-handle--h.dragging { background: var(--color-primary); }
+
+/* ---- Botões base ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1;
+  transition: background var(--transition), opacity var(--transition), border-color var(--transition);
+}
+
+.btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn--primary { background: var(--color-primary); color: #FFF; border-color: var(--color-primary); }
+.btn--primary:hover:not(:disabled) { background: var(--color-primary-hover); }
+
+.btn--danger  { background: var(--color-danger);  color: #FFF; border-color: var(--color-danger); }
+.btn--danger:hover:not(:disabled)  { background: var(--color-danger-hover); }
+
+.btn--ghost   { background: transparent; color: var(--color-text); border-color: var(--color-border-strong); }
+.btn--ghost:hover:not(:disabled)   { background: var(--color-surface-alt); }
+
+.btn--icon    { padding: 5px; border-color: transparent; }
+.btn--icon:hover:not(:disabled) { background: var(--color-surface-alt); border-color: transparent; }
+
+.btn svg { flex-shrink: 0; display: block; }
+
+/* ---- Modais ---- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.modal-overlay[hidden] { display: none; }
+
+.modal-card {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+
+.modal-card--wide { max-width: 560px; }
+
+.modal-card p, .modal-card .modal-body p {
+  font-size: 14px;
+  margin-bottom: 10px;
+  color: var(--color-text);
+  line-height: 1.55;
+}
+
+.modal-card .modal-body code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--color-surface);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--color-border);
+}
+
+.modal-card .modal-body hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 12px 0;
+}
+
+.modal-help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 12px;
+}
+
+.modal-help-header h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.modal-body { margin-bottom: 18px; }
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* ---- Responsividade para telas menores ---- */
+@media (max-width: 900px) {
+  html, body {
+    height: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  #app-header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 16px;
+    gap: 10px;
+  }
+
+  #app-content {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
+  .resize-handle--v {
+    display: none;
+  }
+
+  #config-panel {
+    height: auto;
+    overflow: visible;
+    padding: 18px 20px;
+    border-bottom: 2px solid var(--color-border);
+  }
+
+  #charts-area {
+    min-height: 600px;
+    height: auto;
+    padding: 12px;
+  }
+
+  #chart-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chart-container {
+    min-height: 280px;
+    height: 300px;
+  }
+}
+
