@@ -196,10 +196,24 @@ function _bindEvents() {
     els.modalReset.hidden = true;
   });
 
+  // Fechar modais com tecla ESC ou clique no fundo (backdrop)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') _closeAllModals();
+  });
+  els.modalClear?.addEventListener('click', (e) => { if (e.target === els.modalClear) _closeAllModals(); });
+  els.modalReset?.addEventListener('click', (e) => { if (e.target === els.modalReset) _closeAllModals(); });
+  els.modalHelp?.addEventListener('click',  (e) => { if (e.target === els.modalHelp)  _closeAllModals(); });
+
   // Atualiza label de medição ao trocar modo
   document.querySelectorAll('input[name="mode"]').forEach(r => {
     r.addEventListener('change', () => charts.setMode(config.mode));
   });
+}
+
+function _closeAllModals() {
+  if (els.modalClear) els.modalClear.hidden = true;
+  if (els.modalReset) els.modalReset.hidden = true;
+  if (els.modalHelp) els.modalHelp.hidden = true;
 }
 
 // ---- Handlers de ação ---------------------------------------------
@@ -389,8 +403,10 @@ function _initResizeH() {
   document.addEventListener('mousemove', (e) => {
     if (!dragging) return;
     const rect = content.getBoundingClientRect();
-    let pct = ((e.clientX - rect.left) / rect.width) * 100;
-    pct = Math.max(20, Math.min(68, pct));
+    const minPx = 250;
+    const maxPx = Math.max(minPx, rect.width - 320);
+    const px = Math.max(minPx, Math.min(maxPx, e.clientX - rect.left));
+    const pct = (px / rect.width) * 100;
     content.style.gridTemplateColumns = `${pct.toFixed(1)}% 5px 1fr`;
   });
 
