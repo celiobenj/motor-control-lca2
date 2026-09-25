@@ -31,16 +31,18 @@ enum RefType {
 enum FsmState {
     STATE_IDLE,      ///< Aguardando configuracao ou parado
     STATE_RUNNING,   ///< Controle em execucao ativa
-    STATE_STOPPING   ///< Parando motor e reinicializando estados
+    STATE_STOPPING,  ///< Parando motor e reinicializando estados
+    STATE_IDENT      ///< Identificacao ativa (PRBS)
 };
 
 // -------------------------------------------------------
 /// @brief Tipos de eventos enviados para a tarefa de controle.
 // -------------------------------------------------------
 enum FsmEventType {
-    EVT_APPLY,       ///< Aplicar novos parametros e iniciar
+    EVT_APPLY,       ///< Aplicar novos parametros e iniciar controle
     EVT_STOP,        ///< Parar motor e voltar para IDLE
-    EVT_RESET_TIME   ///< Reiniciar a contagem de tempo (t = 0)
+    EVT_RESET_TIME,  ///< Reiniciar a contagem de tempo (t = 0)
+    EVT_IDENT        ///< Iniciar identificacao PRBS
 };
 
 // -------------------------------------------------------
@@ -60,22 +62,33 @@ struct ControlParams {
 };
 
 // -------------------------------------------------------
+/// @brief Parametros para o ensaio de identificacao (PRBS).
+// -------------------------------------------------------
+struct IdentParams {
+    bool        measureSpeed = true;      ///< true = velocidade (rad/s), false = posicao (rad)
+    int         sampleTimeMs = 5;         ///< Periodo de amostragem em ms
+    uint16_t    stretch      = 5;         ///< Stretch do PRBS (amostras/bit)
+};
+
+// -------------------------------------------------------
 /// @brief Mensagem enviada pela fila de comandos da FSM.
 // -------------------------------------------------------
 struct FsmEventMessage {
     FsmEventType  type;
     ControlParams params;
+    IdentParams   identParams;
 };
 
 // -------------------------------------------------------
 /// @brief Amostra de telemetria enviada para a fila de plot.
 // -------------------------------------------------------
 struct PlotSample {
-    unsigned long t_ms;         ///< Tempo decorrido em ms desde o inicio do ensaio
+    unsigned long t_ms;          ///< Tempo decorrido em ms desde o inicio do ensaio
     float         ref;
     float         medida;
     int           pwm;
     ControlMode   mode;
-    float         potNorm;      ///< Posicao normalizada do potenciometro [0.0 a 1.0]
-    bool          isIdleSample; ///< True se enviada em repouso
+    float         potNorm;       ///< Posicao normalizada do potenciometro [0.0 a 1.0]
+    bool          isIdleSample;  ///< True se enviada em repouso
+    bool          isIdentSample; ///< True se enviada em identificacao PRBS
 };

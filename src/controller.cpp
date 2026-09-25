@@ -1,10 +1,11 @@
 // ============================================================
 /// @file controller.cpp
-/// @brief Implementacao da FSM e loop de controle no Nucleo 1.
+/// @brief Implementacao da FSM, loop de controle e identificacao no Nucleo 1.
 // ============================================================
 
 #include "controller.h"
 #include "encoder_isr.h"
+#include "prbs.h"
 
 static Motor*         _motor       = nullptr;
 static Encoder*       _encoder     = nullptr;
@@ -13,6 +14,9 @@ static QueueHandle_t  _qPlot       = nullptr;
 
 static FsmState       _state       = STATE_IDLE;
 static ControlParams  _params;
+static IdentParams    _identParams;
+static uint16_t       _prbsReg          = 0x2A5B; ///< Registrador LFSR do PRBS (nao nulo)
+static uint16_t       _prbsStretchCount = 0;
 
 static float          _e_hist[MAX_ORDER + 1] = {}; ///< e[k], e[k-1], ...
 static float          _u_hist[MAX_ORDER + 1] = {}; ///< u[k-1], u[k-2], ...
@@ -89,6 +93,16 @@ void controller_task(void* pvParameters) {
                 _reset_state();
                 _state = STATE_RUNNING;
                 xLastWakeTime = xTaskGetTickCount();
+            } else if (msg.type == EVT_IDENT) {
+                _identParams = msg.identParams;
+                _motor->setSpeed(0);
+                _reset_state();
+                _prbsReg          = 0x2A5B;
+                _prbsStretchCount = 0;
+                _state = STATE_IDENT;
+                _tInicio = millis();
+                timer    = _tInicio;
+                xLastWakeTime = xTaskGetTickCount();
             } else if (msg.type == EVT_STOP) {
                 _state = STATE_STOPPING;
             } else if (msg.type == EVT_RESET_TIME) {
@@ -107,13 +121,14 @@ void controller_task(void* pvParameters) {
                     if (_qPlot != nullptr) {
                         float potNorm = constrain((float)analogRead(POT_PIN) / 4095.0f, 0.0f, 1.0f);
                         PlotSample sample;
-                        sample.t_ms         = 0;
-                        sample.ref          = 0.0f;
-                        sample.medida       = 0.0f;
-                        sample.pwm          = 0;
-                        sample.mode         = _params.mode;
-                        sample.potNorm      = potNorm;
-                        sample.isIdleSample = true;
+                        sample.t_ms          = 0;
+                        sample.ref           = 0.0f;
+                        sample.medida        = 0.0f;
+                        sample.pwm           = 0;
+                        sample.mode          = _params.mode;
+                        sample.potNorm       = potNorm;
+                        sample.isIdleSample  = true;
+                        sample.isIdentSample = false;
                         xQueueSend(_qPlot, &sample, 0);
                     }
                 }
@@ -166,33 +181,69 @@ void controller_task(void* pvParameters) {
                     // Calculo da equacao de diferencas
                     float u_now = _compute_control();
 
-                // Saturacao do sinal de controle
-                int pwm_out = 0;
-                float u_hist_val = u_now;
-                
-                if (_params.mode == MODE_SPEED) {
-                    u_now   = constrain(u_now, 0.0f, 255.0f);
-                    pwm_out = (int)u_now;
-                    u_hist_val = u_now; // Speed control antigo saturava o historico
-                } else {
-                    float u_sat = constrain(u_now, -255.0f, 255.0f);
-                    pwm_out = (int)u_sat;
-                    u_hist_val = u_now; // Position control antigo NÃO saturava o historico (Windup bug)
-                }
+                    // Saturacao do sinal de controle
+                    int pwm_out = 0;
+                    float u_hist_val = u_now;
+                    
+                    if (_params.mode == MODE_SPEED) {
+                        u_now   = constrain(u_now, 0.0f, 255.0f);
+                        pwm_out = (int)u_now;
+                        u_hist_val = u_now; // Speed control saturava o historico
+                    } else {
+                        float u_sat = constrain(u_now, -255.0f, 255.0f);
+                        pwm_out = (int)u_sat;
+                        u_hist_val = u_now; // Position control nao saturava o historico
+                    }
 
-                _u_hist[0] = u_hist_val;
-                _motor->setSpeed(pwm_out);
+                    _u_hist[0] = u_hist_val;
+                    _motor->setSpeed(pwm_out);
 
                     // Enfileira amostra para telemetria sem bloquear
                     if (_qPlot != nullptr) {
                         PlotSample sample;
-                        sample.t_ms         = now - _tInicio;
-                        sample.ref          = _currentRef;
-                        sample.medida       = medida;
-                        sample.pwm          = pwm_out;
-                        sample.mode         = _params.mode;
-                        sample.potNorm      = potNorm;
-                        sample.isIdleSample = false;
+                        sample.t_ms          = now - _tInicio;
+                        sample.ref           = _currentRef;
+                        sample.medida        = medida;
+                        sample.pwm           = pwm_out;
+                        sample.mode          = _params.mode;
+                        sample.potNorm       = potNorm;
+                        sample.isIdleSample  = false;
+                        sample.isIdentSample = false;
+                        xQueueSend(_qPlot, &sample, 0);
+                    }
+                    timer = millis();
+                }
+                break;
+            }
+
+            case STATE_IDENT: {
+                if (millis() - timer >= (unsigned long)_identParams.sampleTimeMs) {
+                    unsigned long now = millis();
+
+                    // Gera sinal PRBS de 14 bits com stretch configuravel
+                    uint16_t bit = prbs(_prbsStretchCount, &_prbsReg, 14, _identParams.stretch);
+                    int pwm_out = (bit == 1) ? 255 : -255;
+                    _motor->setSpeed(pwm_out);
+
+                    // Medicao da resposta da planta
+                    float medida = 0.0f;
+                    if (_identParams.measureSpeed) {
+                        medida = _encoder->get_omega(_identParams.sampleTimeMs);
+                    } else {
+                        medida = encoder_get_angle_rad(); // em radianos
+                    }
+
+                    // Enfileira amostra para telemetria
+                    if (_qPlot != nullptr) {
+                        PlotSample sample;
+                        sample.t_ms          = now - _tInicio;
+                        sample.ref           = 0.0f;
+                        sample.medida        = medida;
+                        sample.pwm           = pwm_out;
+                        sample.mode          = _identParams.measureSpeed ? MODE_SPEED : MODE_POSITION;
+                        sample.potNorm       = 0.0f;
+                        sample.isIdleSample  = false;
+                        sample.isIdentSample = true;
                         xQueueSend(_qPlot, &sample, 0);
                     }
                     timer = millis();

@@ -50,6 +50,19 @@ static void _process_json_line(const char* jsonStr) {
         return;
     }
 
+    // Iniciar identificacao PRBS
+    if (strcmp(cmd, "ident") == 0) {
+        FsmEventMessage msg;
+        msg.type = EVT_IDENT;
+        const char* measStr = doc["measure"] | "speed";
+        msg.identParams.measureSpeed = (strcmp(measStr, "position") != 0);
+        msg.identParams.sampleTimeMs = constrain((int)(doc["sample_time_ms"] | 5), 1, 1000);
+        msg.identParams.stretch      = constrain((int)(doc["stretch"] | 5), 1, 100);
+        xQueueSend(_qEvents, &msg, portMAX_DELAY);
+        Serial.println("{\"status\":\"ok\"}");
+        return;
+    }
+
     // Aplicar parametros e iniciar controle
     FsmEventMessage msg;
     msg.type = EVT_APPLY;
@@ -132,6 +145,21 @@ void serial_comm_task(void* pvParameters) {
                 // Em repouso: envia apenas a telemetria do potenciometro
                 Serial.print(">pot:");
                 Serial.println(sample.potNorm, 4);
+            } else if (sample.isIdentSample) {
+                // Em identificacao PRBS: telemetria de identificacao
+                Serial.print(">t:");
+                Serial.println(sample.t_ms);
+
+                Serial.print(">u_ident:");
+                Serial.println(sample.pwm);
+
+                if (sample.mode == MODE_SPEED) {
+                    Serial.print(">omega:");
+                    Serial.println(sample.medida);
+                } else {
+                    Serial.print(">angulo:");
+                    Serial.println(sample.medida);
+                }
             } else {
                 // Em operacao: telemetria completa de controle
                 Serial.print(">t:");
