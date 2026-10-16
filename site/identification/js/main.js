@@ -20,6 +20,7 @@ const els = {
   btnStop:        document.getElementById('btn-stop'),
 
   // Config panel
+  inputLevels:    document.getElementById('prbs-levels'),
   inputTs:        document.getElementById('prbs-ts'),
   inputStretch:   document.getElementById('prbs-stretch'),
   statSamples:    document.getElementById('stat-samples'),
@@ -73,6 +74,7 @@ const serial = new SerialManager();
 const charts = new ChartManager();
 const config = new ConfigPanel(
   {
+    inputLevels:  els.inputLevels,
     inputTs:      els.inputTs,
     inputStretch: els.inputStretch,
     statSamples:  els.statSamples,

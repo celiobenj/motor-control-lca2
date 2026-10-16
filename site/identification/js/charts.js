@@ -139,7 +139,7 @@ export class ChartManager {
             borderColor:     '#E65100',
             backgroundColor: '#E65100',
             borderWidth:     1.5,
-            pointRadius:     1,
+            pointRadius:     0,
             pointHoverRadius: 4,
             pointHitRadius:  8,
             showLine:        true,
