@@ -50,6 +50,45 @@ static void _process_json_line(const char* jsonStr) {
         return;
     }
 
+    // Iniciar identificacao PRBS
+    if (strcmp(cmd, "ident") == 0) {
+        FsmEventMessage msg;
+        msg.type = EVT_IDENT;
+        const char* measStr = doc["measure"] | "speed";
+        msg.identParams.measureSpeed = (strcmp(measStr, "position") != 0);
+        msg.identParams.sampleTimeMs = constrain((int)(doc["sample_time_ms"] | 5), 1, 1000);
+        msg.identParams.stretch      = constrain((int)(doc["stretch"] | 5), 1, 100);
+
+        JsonArray arrL = doc["levels"].as<JsonArray>();
+        msg.identParams.levelCount = 0;
+        for (JsonVariant v : arrL) {
+            if (msg.identParams.levelCount >= MAX_LEVELS) break;
+            int val = v.as<int>();
+            if (msg.identParams.measureSpeed) {
+                val = constrain(val, 0, 255);
+            } else {
+                val = constrain(val, -255, 255);
+            }
+            msg.identParams.levels[msg.identParams.levelCount++] = val;
+        }
+
+        // Fallback de seguranca para padroes se nenhum nivel for informado
+        if (msg.identParams.levelCount == 0) {
+            if (msg.identParams.measureSpeed) {
+                msg.identParams.levels[0] = 0;
+                msg.identParams.levels[1] = 255;
+            } else {
+                msg.identParams.levels[0] = -255;
+                msg.identParams.levels[1] = 255;
+            }
+            msg.identParams.levelCount = 2;
+        }
+
+        xQueueSend(_qEvents, &msg, portMAX_DELAY);
+        Serial.println("{\"status\":\"ok\"}");
+        return;
+    }
+
     // Aplicar parametros e iniciar controle
     FsmEventMessage msg;
     msg.type = EVT_APPLY;
@@ -132,6 +171,21 @@ void serial_comm_task(void* pvParameters) {
                 // Em repouso: envia apenas a telemetria do potenciometro
                 Serial.print(">pot:");
                 Serial.println(sample.potNorm, 4);
+            } else if (sample.isIdentSample) {
+                // Em identificacao PRBS: telemetria de identificacao
+                Serial.print(">t:");
+                Serial.println(sample.t_ms);
+
+                Serial.print(">u_ident:");
+                Serial.println(sample.pwm);
+
+                if (sample.mode == MODE_SPEED) {
+                    Serial.print(">omega:");
+                    Serial.println(sample.medida);
+                } else {
+                    Serial.print(">angulo:");
+                    Serial.println(sample.medida);
+                }
             } else {
                 // Em operacao: telemetria completa de controle
                 Serial.print(">t:");
