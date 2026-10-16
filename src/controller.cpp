@@ -17,6 +17,7 @@ static ControlParams  _params;
 static IdentParams    _identParams;
 static uint16_t       _prbsReg          = 0x2A5B; ///< Registrador LFSR do PRBS (nao nulo)
 static uint16_t       _prbsStretchCount = 0;
+static int            _currentIdentPwm  = 0;
 
 static float          _e_hist[MAX_ORDER + 1] = {}; ///< e[k], e[k-1], ...
 static float          _u_hist[MAX_ORDER + 1] = {}; ///< u[k-1], u[k-2], ...
@@ -98,7 +99,8 @@ void controller_task(void* pvParameters) {
                 _motor->setSpeed(0);
                 _reset_state();
                 _prbsReg          = 0x2A5B;
-                _prbsStretchCount = 0;
+                _prbsStretchCount = _identParams.stretch; // Forca selecao do primeiro nivel no primeiro tick
+                _currentIdentPwm  = (_identParams.levelCount > 0) ? _identParams.levels[0] : 0;
                 _state = STATE_IDENT;
                 _tInicio = millis();
                 timer    = _tInicio;
@@ -220,9 +222,22 @@ void controller_task(void* pvParameters) {
                 if (millis() - timer >= (unsigned long)_identParams.sampleTimeMs) {
                     unsigned long now = millis();
 
-                    // Gera sinal PRBS de 14 bits com stretch configuravel
-                    uint16_t bit = prbs(_prbsStretchCount, &_prbsReg, 14, _identParams.stretch);
-                    int pwm_out = (bit == 1) ? 255 : -255;
+                    // Sorteio pseudo-aleatorio do nivel a cada expiracao do stretch
+                    if (_prbsStretchCount >= _identParams.stretch) {
+                        _prbsStretchCount = 0;
+                        uint16_t mask = (1 << 14) - 1;
+                        uint16_t comp = (_prbsReg ^ (_prbsReg >> 1)) & 1;
+                        _prbsReg = ((_prbsReg >> 1) | (comp << (14 - 1))) & mask;
+
+                        if (_identParams.levelCount > 0) {
+                            int idx = _prbsReg % _identParams.levelCount;
+                            _currentIdentPwm = _identParams.levels[idx];
+                        }
+                    } else {
+                        _prbsStretchCount++;
+                    }
+
+                    int pwm_out = _currentIdentPwm;
                     _motor->setSpeed(pwm_out);
 
                     // Medicao da resposta da planta

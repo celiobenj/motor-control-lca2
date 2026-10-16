@@ -67,7 +67,9 @@ struct ControlParams {
 struct IdentParams {
     bool        measureSpeed = true;      ///< true = velocidade (rad/s), false = posicao (rad)
     int         sampleTimeMs = 5;         ///< Periodo de amostragem em ms
-    uint16_t    stretch      = 5;         ///< Stretch do PRBS (amostras/bit)
+    uint16_t    stretch      = 5;         ///< Stretch do PRBS (amostras/nivel)
+    int         levels[MAX_LEVELS] = {};  ///< Niveis de excitacao PWM configurados
+    int         levelCount   = 0;         ///< Quantidade de niveis
 };
 
 // -------------------------------------------------------
