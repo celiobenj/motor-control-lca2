@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="#1A3A5C"/>
+  <!-- Referencia em degrau (branco translucido) -->
+  <polyline
+    points="4,22 11,22 11,10 28,10"
+    fill="none" stroke="#FFFFFF" stroke-width="2.5"
+    stroke-opacity="0.35" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Curva de resposta em malha fechada (verde) -->
+  <path
+    d="M4,23 C7,23 9,21 11,17 C13,13 15,10.5 20,10 L28,10"
+    fill="none" stroke="#4FC86F" stroke-width="1.5"
+    stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
